@@ -1,0 +1,28 @@
+# <program> is `<main><halfloop>
+# <main> is ^h```$h$h`kii
+# <halfloop> is ^h^m^n````r``$m.*$h$h$n``<add>$m$n
+# <add> is ^m^n^f^x``$m$f``$n$f$x
+#
+# <program> is `<main><halfloop>
+# <main> is ``s``s``sii``s`kk`ki`ki
+# <halfloop> is ``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kr``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk`ki``s``s`ks``s`kk`kk``s`kk`k.*``s``s`ks``s`kk`kk``s`kki``s``s`ks``s`kk`kk``s`kki``s`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`k<add>``s``s`ks``s`kk`kk`ki``s`kk`ki
+# <add> is ``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s``s`ks``s`kk`kk``s`kki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s``s`ks``s`kk`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s`kk`ki``s``s`ks``s`kk`kk``s`kk`ki
+#
+# <program> is ```s``s``sii``s`kk`ki`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kr``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk`ki``s``s`ks``s`kk`kk``s`kk`k.*``s``s`ks``s`kk`kk``s`kki``s``s`ks``s`kk`kk``s`kki``s`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`k``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s``s`ks``s`kk`kk``s`kki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s``s`ks``s`kk`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s`kk`ki``s``s`ks``s`kk`kk``s`kk`ki``s``s`ks``s`kk`kk`ki``s`kk`ki
+#
+```s``s``sii``s`kk`ki`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks`
+`s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`k
+s``s`kk`kk``s`kk`kr``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk
+`ks``s``s`ks``s`kk`kk`ki``s``s`ks``s`kk`kk``s`kk`k.*``s``s`ks``s`kk`kk
+``s`kki``s``s`ks``s`kk`kk``s`kki``s`kk`ki``s``s`ks``s``s`ks``s`kk`ks``
+s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`k``s``s`ks``s``s`ks`
+`s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`ks``s``s`k
+s``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk
+`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s``s`ks``s`
+kk`kk``s`kki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`kk``s`kk`kk``s`
+kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``
+s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks
+``s``s`ks``s`kk`kk``s`kk`ks``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``s`kk`
+kk``s`kk`kk``s``s`ks``s`kk`kk`ki``s``s`ks``s``s`ks``s`kk`ks``s``s`ks``
+s`kk`kk``s`kk`kk``s`kk`ki``s``s`ks``s`kk`kk``s`kk`ki``s``s`ks``s`kk`kk
+`ki``s`kk`ki

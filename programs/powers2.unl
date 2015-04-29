@@ -1,0 +1,18 @@
+# Print the powers of two using asterisks.
+````s``s`ks``s`k`si``s`kk``s`k
+                             ``s``s`ks``s`k`s`ks`s`kk  #\
+                              ``s``s`ks``s`k`s`ks`s`kk # Multiply by two
+                               `k`ki                   #/
+                            ``s`k
+                                ``s``s``si`k.*`kri # Print n (and return n)
+                               i`ki
+  i # The number one
+# The next line starts with `d.  I would have liked to avoid d altogether,
+# but it seems that I made a mistake in my order of evaluation...
+ `d``s``s`ks``s`k`si``s`kk``s`k # Ditto (other half-loop)
+                              ``s``s`ks``s`k`s`ks`s`kk
+                               ``s``s`ks``s`k`s`ks`s`kk
+                                `k`ki
+                             ``s`k
+                                 ``s``s``si`k.*`kri
+                                i`ki

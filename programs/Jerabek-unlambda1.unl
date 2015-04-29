@@ -1,0 +1,41 @@
+# unlambda1.unl -- Unlambda 1 interpreter written in Unlambda 2
+
+# copyright (c) 2003 Emil Jerabek <jerabek@math.cas.cz>
+
+# This program is free software, and it comes with no warranty.
+# You can redistribute it and/or modify it under the terms
+# of the GNU General Public License, either version 2,
+# or (at your option) any later version.
+
+# Usage:
+#
+# Feed the interpreter with a valid Unlambda 1 program (possibly
+# followed by garbage, which is ignored).
+
+# Please see unlambda.unl for details.
+
+````sii
+``s``s``s`k@`ki``s`kc`k
+``s``s`k?```s``s`ks``s``s`ks`kik`k`k``s``s`ks``sii``sii
+``s``s`k?s``s``s`ks``s``s`ks`kik`k`k`k`ks
+``s``s`k?k``s``s`ks``s``s`ks`kik`k`k`k`kk
+``s``s`k?i``s``s`ks``s``s`ks`kik`k`k`k`ki
+``s``s`k?v``s``s`ks``s``s`ks`kik`k`k`k`kv
+``s``s`k?c``s``s`ks``s``s`ks`kik`k`k`k`kc
+``s``s`k?d``s``s`ks``s``s`ks`kik`k`k`k`kd
+``s``s`k?r``s``s`ks``s``s`ks`kik`k`k`k`kr
+``s``s`k?S``s``s`ks``s``s`ks`kik`k`k`k`ks
+``s``s`k?K``s``s`ks``s``s`ks`kik`k`k`k`kk
+``s``s`k?I``s``s`ks``s``s`ks`kik`k`k`k`ki
+``s``s`k?V``s``s`ks``s``s`ks`kik`k`k`k`kv
+``s``s`k?C``s``s`ks``s``s`ks`kik`k`k`k`kc
+``s``s`k?D``s``s`ks``s``s`ks`kik`k`k`k`kd
+``s``s`k?R``s``s`ks``s``s`ks`kik`k`k`k`kr
+``s``s`k?.``s``s`ks``s``s`ks`kik`k``s``s``si`k@`ki``s`kk``s`kk``s`k|`ki
+#ifndef perl
+``s``s`k?#``s``s`ks``s``s`ks`kik`k``s``s``si`k``sii`k``s``s``s`k@`ki``s`k?
+  ``s`k`s`kc``s``s`ks``s`kk``s`ks``s`kkk`k``ss`k`k`kii`k``sii
+#endif
+``si`k``sii
+i
+i

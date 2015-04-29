@@ -1,0 +1,39 @@
+-rw-r--r--    1 madore   ftp           188 Oct 27  1999 Hello.unl
+	Written by Panu Kalliokoski <Panu.Kalliokoski@nokia.com>
+	Write ``Hello world!'' ten times.
+-rw-r--r--    1 madore   ftp         15023 Jan 22 02:23 Jerabek-unlambda.unl
+	Written by Emil Jerabek <jerabek@math.cas.cz>
+	Unlambda interpreter
+-rw-r--r--    1 madore   ftp          1422 Jan 22 02:23 Jerabek-unlambda1.unl
+	Written by Emil Jerabek <jerabek@math.cas.cz>
+	Unlambda 1 interpreter (in Unlambda 2)
+-rw-r--r--    1 madore   ftp           553 Oct 27  1999 Square.unl
+	Written by Panu Kalliokoski <Panu.Kalliokoski@nokia.com>
+	Display the squares of the integers up to 9, as squares of asterisks.
+-rw-r--r--    1 madore   ftp            29 Oct 15 16:05 Triangle.unl
+	Written by Brandon Moore <brandon@its.caltech.edu>
+	Display triangles of asterisks of increasing size.
+-rw-r--r--    1 madore   ftp           611 Oct 27  1999 count.unl
+	Written by David Madore <david.madore@ens.fr>
+	Display the integers consecutively, as a pyramid of asterisks.
+-rw-r--r--    1 madore   ftp           219 Oct 27  1999 count2.unl
+	Written by David Madore <david.madore@ens.fr>
+	Same as count.unl but much shorter (and harder to understand).
+-rw-r--r--    1 madore   ftp           902 Oct 27  1999 powers2.unl
+	Written by David Madore <david.madore@ens.fr>
+	Display the powers of two (as lines of asterisks).
+-rw-r--r--    1 madore   ftp         14246 Dec 19  2000 prime_numbers.unl
+	Written by Olivier Wittenberg <olivier.wittenberg@ens.fr>
+	List prime numbers in *decimal*.
+-rw-r--r--    1 madore   ftp            94 Oct 27  1999 trivial.unl
+	Written by David Madore <david.madore@ens.fr>
+	Loop displaying a string.
+-rw-r--r--    1 madore   ftp            96 Oct 27  1999 trivial2.unl
+	Written by David Madore <david.madore@ens.fr>
+	Same as trivial.unl but use call/cc.
+-rw-r--r--    1 madore   ftp           190 Oct 27  1999 trivial3.unl
+	Written by David Madore <david.madore@ens.fr>
+	Same as trivial.unl but avoid use of delay.
+-rw-r--r--    1 madore   ftp         39343 Dec 19  2000 unlambda_interpreter.unl
+	Written by Olivier Wittenberg <olivier.wittenberg@ens.fr>
+	Unlambda interpreter in Unlambda.
