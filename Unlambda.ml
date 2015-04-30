@@ -1,7 +1,5 @@
 open Syntax
 
-let current_char : (char option) ref  = ref None
-
 let slurp file_path =
   let rec iter chan =
     try
@@ -89,10 +87,66 @@ and eval (exp : exp) (cc : char option) cont =
         | v1 -> eval arg2 cc' (fun v2 cc'' -> apply v1 v2 cc'' cont))
   | _ -> cont exp cc
 
+(*
+ * This piece of state will be used in staged interpreter (see also
+ * documentation for the reason why)
+ *
+ * Note that it also used in the fallback interpreter of staged interpreter.
+ *)
+
+let current_char : (char option) ref  = ref None
+
+(* Interpreter that uses global state, and also continuations are represented as
+ * data instead of functions TODO: Talk about this in the report *)
+
+let rec apply_cont (e1 : exp_s) (cont : cont list) : exp_s =
+  match cont with
+  | [] -> e1
+  | DelayGuard e2 :: rest -> begin
+      match e1 with
+      | D_S -> apply_cont (D1_S e2) rest
+      | _   -> eval_ref e2 (ApplyTo e1 :: rest)
+    end
+  | ApplyTo f :: rest -> apply_ref f e1 rest
+  | ApplyDelayed a :: rest -> apply_ref e1 a rest
+
+and apply_ref (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s =
+  match e1 with
+  | K_S -> apply_cont (K1_S e2) cont
+  | K1_S x -> apply_cont x cont
+  | S_S -> apply_cont (S1_S e2) cont
+  | S1_S x -> apply_cont (S2_S (x, e2)) cont
+  | S2_S (x, y) ->
+      eval_ref (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont
+  | I_S -> apply_cont e2 cont
+  | V_S -> apply_cont V_S cont
+  | C_S -> apply_cont (Cont_S cont) cont
+  | Cont_S cont' -> apply_cont e2 cont'
+  | D_S -> apply_cont e2 cont
+  | D1_S f -> eval_ref f (ApplyDelayed e2 :: cont)
+  | Print_S c -> print_char c; flush stdout; apply_cont e2 cont
+  | E_S x -> x
+  | Read_S ->
+      let c = (try Some (input_char stdin)
+               with _ -> None) in
+      current_char := c;
+      apply_ref e2 (match c with None -> V_S | Some _ -> I_S) cont
+  | Cmp_S c ->
+      apply_ref e2 (if Some c = !current_char then I_S else V_S) cont
+  | Repr_S ->
+      apply_ref e2 (match !current_char with None -> V_S | Some c -> Print_S c) cont
+  | _ -> assert false
+
+and eval_ref (exp : exp_s) (cont : cont list) =
+  match exp with
+  | Backtick_S (arg1, arg2) -> eval_ref arg1 (DelayGuard arg2 :: cont)
+  | _ -> apply_cont exp cont
+
 (* First staged interpreter: Very powerful, but loop if programs loop *)
 
 and apply_s1 (e1 : exp_s) (e2 : exp_s) (cc : char option)
              (cont : exp_s -> char option -> exp_s code) : exp_s code =
+(*
   match e1 with
   | K_S -> cont (K1_S e2) cc
   | K1_S x -> cont x cc
@@ -168,13 +222,19 @@ and eval_s1 (exp : exp_s) (cc : char option)
       | v1  -> eval_s1 arg2 cc' (fun v2 cc'' -> apply_s1 v1 v2 cc'' cont))
   | _ -> cont exp cc
 
+  *)
+
 let _ =
   let contents = slurp Sys.argv.(1) in
   let (p, pos) = parse contents in
 
   if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage" == 0 then
-    Print_code.print_code Format.std_formatter (eval_s1 (tr p) None (fun x _ -> .<x>.))
+    (* Print_code.print_code Format.std_formatter (eval_s1 (tr p) None (fun x _ -> .<x>.)) *)
     (* Runcode.(!.) (eval_s1 (tr p) None (fun x _ -> .<x>.)); *)
+    ()
+  else if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "cont" == 0 then
+    let _ = eval_ref (tr p) [] in
+    ()
   else begin
     Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
     (* FIXME: This assertion fails if program has trailing WS/comments *)

@@ -19,8 +19,20 @@ type exp =
   | Cmp        of char
   | Repr
 
-(* syntax tree for staged interpreter, only difference is continuations *)
-type exp_s =
+(* syntax tree for staged interpreter, only difference is continuations, we need
+ * a different representation of continuations, because depending on whether
+ * we're running the specializer or the interpreter we'll need to do different
+ * things on the continuations *)
+
+(* TODO: Also talk about how did we come up with these continuations. *)
+
+type cont =
+  | DelayGuard of exp_s (* depending on the result delay
+                           second argument *)
+  | ApplyTo of exp_s (* apply to this expression *)
+  | ApplyDelayed of exp_s (* apply function to this argument *)
+
+and exp_s =
   | Backtick_S of exp_s * exp_s
   | K_S
   | K1_S       of exp_s
@@ -30,7 +42,7 @@ type exp_s =
   | I_S
   | V_S
   | C_S
-  | Cont_S     of (exp_s -> char option -> exp_s code)
+  | Cont_S     of (cont list)
   | D_S
   | D1_S       of exp_s
   | Print_S    of char
