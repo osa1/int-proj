@@ -198,12 +198,13 @@ and eval_staged (exp : exp_s) (cont : cont list) : exp_s code =
 let _ =
   let contents = slurp Sys.argv.(1) in
   let (p, pos) = parse contents in
+  let p'       = tr p in
 
   if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage0" == 0 then
-    let _ = Print_code.print_code Format.std_formatter .< eval_ref (tr p) [] >. in
+    let _ = Print_code.print_code Format.std_formatter .< eval_ref p' [] >. in
     ()
   else if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage" == 0 then
-    let _ = Print_code.print_code Format.std_formatter (eval_staged (tr p) []) in
+    let _ = Print_code.print_code Format.std_formatter (eval_staged p' []) in
     (* Runcode.(!.) (eval_s1 (tr p) None (fun x _ -> .<x>.)); *)
     ()
   else if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "cont" == 0 then
