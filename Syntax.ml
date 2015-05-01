@@ -1,3 +1,32 @@
+(* TODO: Here's a typing problem:
+ *
+ * We have a syntax tree with continuations, we want to abstract it over
+ * continuation types:
+ *
+ * type cont = Cont
+ *
+ * type exp_1 =
+ *   | Cont_1 of (exp_1 -> exp_1)
+ *
+ * type exp_2 =
+ *   | Cont_2 of cont list
+ *
+ * So we parameterize it as:
+ *
+ * type 'cont exp_p =
+ *   | Cont of 'cont
+ *
+ * Now exp_2 is fine:
+ *
+ * type exp_2_i = (cont list) exp_p
+ *
+ * But I can't instantiate first case without recursive types:
+ *
+ * type cont_1  = (cont_1 exp_p -> cont_1 exp_p)
+ * type exp_1_i = cont_1 exp_p
+ *
+ *)
+
 (* syntax tree for basic interpreter *)
 type exp =
   | Backtick   of exp * exp
@@ -21,15 +50,14 @@ type exp =
 
 (* syntax tree for staged interpreter, only difference is continuations, we need
  * a different representation of continuations, because depending on whether
- * we're running the specializer or the interpreter we'll need to do different
- * things on the continuations *)
+ * we're running the specializer or the interpreter(in case of a fallback) we'll
+ * need to do different things on the continuations *)
 
 (* TODO: Also talk about how did we come up with these continuations. *)
 
 type cont =
-  | DelayGuard of exp_s (* depending on the result delay
-                           second argument *)
-  | ApplyTo of exp_s (* apply to this expression *)
+  | DelayGuard of exp_s   (* depending on the result delay second argument *)
+  | ApplyTo of exp_s      (* apply to this expression *)
   | ApplyDelayed of exp_s (* apply function to this argument *)
 
 and exp_s =

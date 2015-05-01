@@ -195,91 +195,14 @@ and eval_staged (exp : exp_s) (cont : cont list) : exp_s code =
   | Backtick_S (arg1, arg2) -> eval_staged arg1 (DelayGuard arg2 :: cont)
   | _ -> apply_cont_staged exp cont
 
-(*
-let rec apply_s1 (e1 : exp_s) (e2 : exp_s) (cc : char option)
-                 (cont : exp_s -> char option -> exp_s code) : exp_s code =
-  match e1 with
-  | K_S -> cont (K1_S e2) cc
-  | K1_S x -> cont x cc
-  | S_S -> cont (S1_S e2) cc
-  | S1_S x -> cont (S2_S (x, e2)) cc
-  | S2_S (x, y) -> eval_s1 (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
-  | I_S -> cont e2 cc
-  | V_S -> cont V_S cc
-  | D_S -> cont e2 cc
-  | C_S -> cont (Cont_S cont) cc
-  | Cont_S c -> c e2 cc
-  | D1_S f -> eval_s1 f cc (fun v1 cc' -> apply_s1 v1 e2 cc' cont)
-  | Print_S c ->
-      (* ops.. apparently seq syntax is not supported in quotations
-       * .< print_char c; .~ (cont e2 cc) >. *)
-      .< let _ = print_char c in .~ (cont e2 cc) >.
-  | E_S x -> .< x >.
-  | Read_S ->
-      (* I'm afraid it's not possible to implement this without using a referecence cell *)
-
-      (* this is very nice, MetaOCaml gives an error, saying that we can't use
-       * c in next splicing because basically it's dynamic and can't be known
-       * until runtime *)
-      (* .< let c = (try Some (input_char stdin)
-                     with _ -> None) in
-            .~ (apply_s1 e2 (match c with None -> V | Some _ -> I) c cont) >. *)
-
-      (* TODO: find a way to make this working *)
-      .< let c = (try Some (input_char stdin)
-                  with _ -> None) in
-
-         match c with
-         | None    -> .~ (apply_s1 e2 V_S None cont)
-         | Some c1 ->
-             (* Since c1 is dynamic enough(e.g. there are too many branches if
-              * we want to specialize depending on all possible values of it)
-              * we want to fallback to interpreter at this point *)
-
-             assert false (* .~ (apply_s1 e2 I_S (Some c1) cont) *)
-       >.
-  | Cmp_S c ->
-      (* here let's say cc is Dynamic, generated code should include a `match _
-       * with` expression, but that will be the scr part? *)
-
-      (* Current character need to be passed up to this point somehow, but we
-       * don't have tail-calls to pass some state to next steps of the
-       * interpreter -- the whole point is to remove those and have an OCaml
-       * program that does what our interpreted program does. So what we need
-       * to do is to add a top-level state(reference cell) for current
-       * character, and use it herer
-       *
-       * But then there's one more tricky thing... We want to fallback to
-       * interpreter when at some points(for example, when we're having a
-       * dynamic input and we need to branch depending on that). To be able to
-       * do that interpreter need to use that global state too.
-       *
-       * Or maybe we can have an interpreter that takes ref cell as argument,
-       * and then we can pass our ref cell to it.
-       *
-       * Hm..
-       *)
-      .< let c = !current_char in
-         assert false >.
-
-  | _ -> assert false
-
-and eval_s1 (exp : exp_s) (cc : char option)
-            (cont : exp_s -> char option -> exp_s code) : exp_s code =
-  match exp with
-  | Backtick_S (arg1, arg2) -> eval_s1 arg1 cc (fun arg1v cc' ->
-      match arg1v with
-      | D_S -> cont (D1_S arg2) cc'
-      | v1  -> eval_s1 arg2 cc' (fun v2 cc'' -> apply_s1 v1 v2 cc'' cont))
-  | _ -> cont exp cc
-
-  *)
-
 let _ =
   let contents = slurp Sys.argv.(1) in
   let (p, pos) = parse contents in
 
-  if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage" == 0 then
+  if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage0" == 0 then
+    let _ = Print_code.print_code Format.std_formatter .< eval_ref (tr p) [] >. in
+    ()
+  else if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage" == 0 then
     let _ = Print_code.print_code Format.std_formatter (eval_staged (tr p) []) in
     (* Runcode.(!.) (eval_s1 (tr p) None (fun x _ -> .<x>.)); *)
     ()
