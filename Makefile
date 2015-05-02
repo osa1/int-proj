@@ -3,11 +3,11 @@ ALL: unlambda_idris unlambda_metaocaml
 unlambda_idris: Unlambda.idr
 	idris $< -o $@
 
-unlambda_metaocaml: Syntax.cmo Unlambda.ml
-	metaocamlc $^ -o $@
+unlambda_metaocaml: Syntax.cmo Unlambda.cmo Unlambda_compile.ml
+	metaocamlc $^ -o $@ -g
 
 %.cmo: %.ml
-	metaocamlc -c $<
+	metaocamlc -c $< -g
 
 clean:
 	rm -f *.cmo

@@ -1,55 +1,5 @@
 open Syntax
 
-let slurp file_path =
-  let rec iter chan =
-    try
-      (* interestingly, this doesn't work:
-           input_line chan :: iter chan
-         I have no ideas what's going wrong *)
-      let line = input_line chan in
-      line :: iter chan
-    with e ->
-      close_in_noerr chan;
-      []
-  in
-  String.concat "\n" (iter (open_in file_path))
-
-let parse (str : string) : (exp * int) =
-  let rec skip_comment idx =
-    match String.get str idx with
-    | '\n' -> idx + 1
-    | _    -> skip_comment (idx + 1)
-  in
-  let rec loop idx =
-    match String.get str idx with
-    | '#' -> loop (skip_comment (idx + 1))
-    | '`' ->
-        let (e1, idx1) = loop (idx  + 1) in
-        let (e2, idx2) = loop idx1 in
-        (Backtick (e1, e2), idx2)
-    | '.' ->
-        let c = String.get str (idx + 1) in
-        (Print c, idx + 2)
-    | 'r' -> (Print '\n', idx + 1)
-    | 'k' -> (K, idx + 1)
-    | 's' -> (S, idx + 1)
-    | 'i' -> (I, idx + 1)
-    | 'v' -> (V, idx + 1)
-    | 'c' -> (C, idx + 1)
-    | 'd' -> (D, idx + 1)
-    | 'e' ->
-        let (e, idx1) = loop (idx + 1) in
-        (E e, idx1)
-    | '@' -> (Read, idx + 1)
-    | '?' ->
-        let c = String.get str (idx + 1) in
-        (Cmp c, idx + 2)
-    | '|' -> (Repr, idx + 1)
-    | ' ' | '\n' | '\t' -> loop (idx + 1)
-    | chr -> raise (Failure ("Invalid char found: " ^ Char.escaped chr))
-  in
-  loop 0
-
 (* First implementation: A CPS style interpreter. Continuation is used to
  * implement call/cc *)
 
@@ -69,8 +19,8 @@ let rec apply (e1 : exp) (e2 : exp) (cc : char option) (cont : exp -> char optio
   | Print c -> print_char c; flush stdout; cont e2 cc
   | E x -> x
   | Read ->
-      let c = (try Some (input_char stdin)
-               with _ -> None) in
+      let c = try Some (input_char stdin)
+              with _ -> None in
       apply e2 (match c with None -> V | Some _ -> I) c cont
   | Cmp c ->
       apply e2 (if Some c = cc then I else V) cc cont
@@ -78,7 +28,7 @@ let rec apply (e1 : exp) (e2 : exp) (cc : char option) (cont : exp -> char optio
       apply e2 (match cc with None -> V | Some c -> Print c) cc cont
   | Backtick (e1, e2) -> raise (Failure "can't apply to backtick")
 
-and eval (exp : exp) (cc : char option) cont =
+and eval (exp : exp) (cc : char option) (cont : exp -> char option -> exp) =
   match exp with
   | Backtick (arg1, arg2) ->
       eval arg1 cc (fun arg1v cc' ->
@@ -146,6 +96,8 @@ and eval_ref (exp : exp_s) (cont : cont list) =
 (* First staged interpreter: Very powerful, but loop if programs loop *)
 
 let rec apply_cont_staged (e1 : exp_s) (cont : cont list) : exp_s code =
+  (*Printf.printf "current term: %s, cont stack depth: %d\n" (exp_to_string @@ trb e1) (List.length cont);*)
+  (* Printf.printf "applying %s to %s\n" (exp_to_string @@ trb e1) (cont_list_to_string cont); *)
   match cont with
   | [] -> .< e1 >.
   | DelayGuard e2 :: rest -> begin
@@ -163,22 +115,29 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s code =
   | S_S -> apply_cont_staged (S1_S e2) cont
   | S1_S x -> apply_cont_staged (S2_S (x, e2)) cont
   | S2_S (x, y) ->
-      eval_staged (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont
+      (* .< eval_ref (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont >. *)
+      (*
+       *)
+      let app_1 = eval_staged (Backtick_S (x, e2)) [] in
+      let app_2 = eval_staged (Backtick_S (y, e2)) [] in
+      .< eval_ref (Backtick_S (.~app_1, .~app_2)) cont >.
+      (* eval_staged (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont *)
   | I_S -> apply_cont_staged e2 cont
   | V_S -> apply_cont_staged V_S cont
   | C_S -> apply_cont_staged (Cont_S cont) cont
-  | Cont_S cont' -> apply_cont_staged e2 cont'
+  | Cont_S cont' ->
+      (* apply_cont_staged e2 cont'
+       * We're using interpreter here to break the loop *)
+      .< apply_cont e2 cont' >.
   | D_S -> apply_cont_staged e2 cont
   | D1_S f -> eval_staged f (ApplyDelayed e2 :: cont)
-  | Print_S c -> .< let _ = print_char c in .~ (apply_cont_staged e2 cont)  >.
+  | Print_S c -> .< let _ = print_char c in .~ (apply_cont_staged e2 cont) >.
   | E_S x -> .< x >.
   | Read_S ->
       .< let c = try Some (input_char stdin)
                  with _ -> None in
          current_char := c;
-         (* TODO: Explain why we can't just use `c` here *)
-         apply_ref e2 (match !current_char with None -> V_S | Some _ -> I_S) cont
-         (* .~ (apply_staged e2 (match !current_char with None -> V_S | Some _ -> I_S) cont) *)
+         apply_ref e2 (match c with None -> V_S | Some _ -> I_S) cont
        >.
   | Cmp_S c ->
       (* TODO: we're being overly conservative here, we can have static values
@@ -194,26 +153,3 @@ and eval_staged (exp : exp_s) (cont : cont list) : exp_s code =
   match exp with
   | Backtick_S (arg1, arg2) -> eval_staged arg1 (DelayGuard arg2 :: cont)
   | _ -> apply_cont_staged exp cont
-
-let _ =
-  let contents = slurp Sys.argv.(1) in
-  let (p, pos) = parse contents in
-  let p'       = tr p in
-
-  if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage0" == 0 then
-    let _ = Print_code.print_code Format.std_formatter .< eval_ref p' [] >. in
-    ()
-  else if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "stage" == 0 then
-    let _ = Print_code.print_code Format.std_formatter (eval_staged p' []) in
-    (* Runcode.(!.) (eval_s1 (tr p) None (fun x _ -> .<x>.)); *)
-    ()
-  else if Array.length Sys.argv == 3 && String.compare Sys.argv.(2) "cont" == 0 then
-    let _ = eval_ref (tr p) [] in
-    ()
-  else begin
-    Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
-    (* FIXME: This assertion fails if program has trailing WS/comments *)
-    assert (pos == String.length contents);
-    let _ = eval p None (fun x _ -> x) in
-    ()
-  end
