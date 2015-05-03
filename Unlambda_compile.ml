@@ -1,6 +1,7 @@
 (* Code printing is done here to make CSP values printed better *)
 
 open Syntax
+open Lift
 open Unlambda
 
 let slurp file_path =
@@ -60,7 +61,7 @@ let _ =
 
   match Array.to_list Sys.argv with
   | [_; _; "stage0"] ->
-      Print_code.print_code Format.std_formatter .< eval_ref exp_s [] >.;
+      Print_code.print_code Format.std_formatter .< eval_ref .~ (lift_exp_s exp_s) [] >.;
   | [_; _; "stage"] ->
       let _ = Print_code.print_code Format.std_formatter (eval_staged exp_s []) in
       if Array.length Sys.argv == 4 && String.compare Sys.argv.(3) "run" == 0 then
@@ -68,5 +69,5 @@ let _ =
   | [_; _; "cont"] ->
       let _ = eval_ref exp_s [] in ()
   | _ ->
-    Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
-    let _ = eval exp None (fun x _ -> x) in ()
+      Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
+      let _ = eval exp None (fun x _ -> x) in ()

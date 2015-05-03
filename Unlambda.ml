@@ -1,4 +1,5 @@
 open Syntax
+open Lift
 
 (* First implementation: A CPS style interpreter. Continuation is used to
  * implement call/cc *)
@@ -120,7 +121,7 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s code =
        *)
       let app_1 = eval_staged (Backtick_S (x, e2)) [] in
       let app_2 = eval_staged (Backtick_S (y, e2)) [] in
-      .< eval_ref (Backtick_S (.~app_1, .~app_2)) cont >.
+      .< eval_ref (Backtick_S (.~app_1, .~app_2)) .~ (lift_conts cont) >.
       (* eval_staged (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont *)
   | I_S -> apply_cont_staged e2 cont
   | V_S -> apply_cont_staged V_S cont
@@ -132,20 +133,22 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s code =
   | D_S -> apply_cont_staged e2 cont
   | D1_S f -> eval_staged f (ApplyDelayed e2 :: cont)
   | Print_S c -> .< let _ = print_char c in .~ (apply_cont_staged e2 cont) >.
-  | E_S x -> .< x >.
+  | E_S x -> .< .~ (lift_exp_s x) >.
   | Read_S ->
       .< let c = try Some (input_char stdin)
                  with _ -> None in
          current_char := c;
-         apply_ref e2 (match c with None -> V_S | Some _ -> I_S) cont
+         apply_ref e2 (match c with None -> V_S | Some _ -> I_S) .~ (lift_conts cont)
        >.
   | Cmp_S c ->
       (* TODO: we're being overly conservative here, we can have static values
        * in current_char *)
-      .< apply_ref e2 (if Some c = !current_char then I_S else V_S) cont >.
+      .< apply_ref e2 (if Some c = !current_char then I_S else V_S)
+                   .~ (lift_conts cont) >.
   | Repr_S ->
       (* TODO: Same problem here, we may have statically known value *)
-      .< apply_ref e2 (match !current_char with None -> V_S | Some c -> Print_S c) cont >.
+      .< apply_ref e2 (match !current_char with None -> V_S | Some c -> Print_S c)
+                   .~ (lift_conts cont) >.
   | Backtick_S _ ->
       raise (Failure "Can't apply to backtick.")
 
