@@ -3,7 +3,7 @@ open Syntax
 (* First implementation: A CPS style interpreter. Continuation is used to
  * implement call/cc *)
 
-let rec apply (e1 : exp) (e2 : exp) (cc : char option) (cont : exp -> char option -> exp) =
+let rec apply (e1 : exp) (e2 : exp) (cc : char option) (cont : exp -> char option -> exp) : exp =
   match e1 with
   | K -> cont (K1 e2) cc
   | K1 x -> cont x cc
@@ -28,7 +28,7 @@ let rec apply (e1 : exp) (e2 : exp) (cc : char option) (cont : exp -> char optio
       apply e2 (match cc with None -> V | Some c -> Print c) cc cont
   | Backtick (e1, e2) -> raise (Failure "can't apply to backtick")
 
-and eval (exp : exp) (cc : char option) (cont : exp -> char option -> exp) =
+and eval (exp : exp) (cc : char option) (cont : exp -> char option -> exp) : exp =
   match exp with
   | Backtick (arg1, arg2) ->
       eval arg1 cc (fun arg1v cc' ->
@@ -88,7 +88,7 @@ and apply_ref (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s =
   | Backtick_S _ ->
       raise (Failure "Can't apply to backtick.")
 
-and eval_ref (exp : exp_s) (cont : cont list) =
+and eval_ref (exp : exp_s) (cont : cont list) : exp_s =
   match exp with
   | Backtick_S (arg1, arg2) -> eval_ref arg1 (DelayGuard arg2 :: cont)
   | _ -> apply_cont exp cont
