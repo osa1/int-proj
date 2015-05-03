@@ -100,7 +100,7 @@ let rec apply_cont_staged (e1 : exp_s) (cont : cont list) : exp_s code =
   (*Printf.printf "current term: %s, cont stack depth: %d\n" (exp_to_string @@ trb e1) (List.length cont);*)
   (* Printf.printf "applying %s to %s\n" (exp_to_string @@ trb e1) (cont_list_to_string cont); *)
   match cont with
-  | [] -> .< e1 >.
+  | [] -> .< .~ (lift_exp_s e1) >.
   | DelayGuard e2 :: rest -> begin
       match e1 with
       | D_S -> apply_cont_staged (D1_S e2) rest
@@ -129,7 +129,7 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s code =
   | Cont_S cont' ->
       (* apply_cont_staged e2 cont'
        * We're using interpreter here to break the loop *)
-      .< apply_cont e2 cont' >.
+      .< apply_cont .~ (lift_exp_s e2) .~ (lift_conts cont') >.
   | D_S -> apply_cont_staged e2 cont
   | D1_S f -> eval_staged f (ApplyDelayed e2 :: cont)
   | Print_S c -> .< let _ = print_char c in .~ (apply_cont_staged e2 cont) >.
