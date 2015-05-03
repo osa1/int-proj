@@ -7,6 +7,16 @@ open Syntax
  * arguments(although it uses Obj.magic for that), so maybe some of the
  * patterns may be replaced with a wildcard here *)
 
+(* NOTE: Even after all those boilerplate, there are still some problems with
+ * MetaOCaml printing. Let's say I have these modules:
+ *
+ * A: Defines `eval_ref`.
+ *    Defines `gen_code` that generates code that references `eval_ref`.
+ * B: Calls `A.gen_code` and prints code object.
+ *
+ * The printed code will have `(* CSP eval_ref *)` instead of `A.eval_ref`.
+ *)
+
 let rec lift_exp_s (exp : exp_s) : exp_s code =
   match exp with
   | Backtick_S (e1, e2) -> .< Backtick_S ( .~ (lift_exp_s e1), .~ (lift_exp_s e2) ) >.
