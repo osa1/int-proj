@@ -13,7 +13,7 @@ let rec apply (e1 : exp) (e2 : exp) (cc : char option) (cont : exp -> char optio
   | S2 (x, y) -> eval (Backtick (Backtick (x, e2), Backtick (y, e2))) cc cont
   | I -> cont e2 cc
   | V -> cont V cc
-  | C -> cont (Cont cont) cc
+  | C -> apply e2 (Cont cont) cc cont
   | Cont c -> c e2 cc
   | D -> cont e2 cc
   | D1 f -> eval f cc (fun v1 cc' -> apply v1 e2 cc' cont)
@@ -71,7 +71,7 @@ and apply_ref (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s =
       eval_ref (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont
   | I_S -> apply_cont e2 cont
   | V_S -> apply_cont V_S cont
-  | C_S -> apply_cont (Cont_S cont) cont
+  | C_S -> apply_ref e2 (Cont_S cont) cont
   | Cont_S cont' -> apply_cont e2 cont'
   | D_S -> apply_cont e2 cont
   | D1_S f -> eval_ref f (ApplyDelayed e2 :: cont)
@@ -125,7 +125,7 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cont : cont list) : exp_s code =
       (* eval_staged (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont *)
   | I_S -> apply_cont_staged e2 cont
   | V_S -> apply_cont_staged V_S cont
-  | C_S -> apply_cont_staged (Cont_S cont) cont
+  | C_S -> apply_staged e2 (Cont_S cont) cont
   | Cont_S cont' ->
       (* apply_cont_staged e2 cont'
        * We're using interpreter here to break the loop *)
