@@ -1,0 +1,9 @@
+# eof-test: Try to read a character, print T when succeed, print F otherwise.
+
+`r` ```
+
+``s`kc``s`k`s`k`kk``ss`k`k`ki
+
+`@i
+
+.F .T i
