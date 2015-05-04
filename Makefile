@@ -1,9 +1,6 @@
 # TODO: Maybe get into this make depend business.
 
-ALL: unlambda_idris unlambda_metaocaml supercomp
-
-supercomp: Supercomp.ml
-	metaocamlc $^ -o $@ -g
+ALL: unlambda_idris unlambda_metaocaml
 
 unlambda_idris: Unlambda.idr
 	idris $< -o $@
