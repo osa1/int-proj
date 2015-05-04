@@ -31,10 +31,10 @@ let rec lift_exp_s (exp : exp_s) : exp_s code =
   | Cont_S conts -> .< Cont_S .~ (lift_conts conts) >.
   | D_S -> .< D_S >.
   | D1_S e -> .< D1_S .~ (lift_exp_s e) >.
-  | Print_S c -> .< Print_S c >. (* TODO: Do I need to manually lift char here? *)
+  | Print_S c -> .< Print_S c >. (* char is lifted automatically *)
   | E_S e -> .< E_S .~ (lift_exp_s e) >.
   | Read_S -> .< Read_S >.
-  | Cmp_S c -> .< Cmp_S c >. (* TODO: Another char here *)
+  | Cmp_S c -> .< Cmp_S c >.
   | Repr_S -> .< Repr_S >.
 
 and lift_conts (conts : cont list) : (cont list) code =
