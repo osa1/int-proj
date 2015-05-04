@@ -1,7 +1,8 @@
 (* Code printing is done here to make CSP values printed better *)
 
-open Syntax
+open CmdArgs
 open Lift
+open Syntax
 
 let slurp file_path =
   let rec iter chan =
@@ -51,22 +52,75 @@ let _ =
   (* I don't want program to run if tests fail *)
   run_tests ();
 
-  let contents = slurp Sys.argv.(1) in
+  let input_file : (string option) ref = ref None in
+  let usage = "" in
 
-  let (p, pos) = parse_var contents in
-  let exp      = tr_v (abs_elim p) in
-  let exp_s    = tr exp in
+  (* I want my optparse-applicative back ... *)
 
-  match Array.to_list Sys.argv with
-  | [_; _; "stage0"] ->
-      Print_code.print_code Format.std_formatter .< UnlambdaCont.eval .~ (lift_exp_s exp_s) None [] >.;
-  | (_ :: _ :: "stage" :: _) ->
-      let _ = Print_code.print_code Format.std_formatter (UnlambdaStaged.eval exp_s None []) in
-      if Array.length Sys.argv == 4 && String.compare Sys.argv.(3) "run" == 0 then
-        let _ = Runcode.(!.) (UnlambdaStaged.eval exp_s None []) in ()
-  | [_; _; "cont"] ->
-      let _ = UnlambdaCont.eval exp_s None [] in ()
-  | _ ->
-      Printf.printf "running reference implementation\n";
-      Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
-      let _ = UnlambdaInterp.eval exp None (fun x _ -> x) in ()
+  (* FIXME: opts is from CmdArgs module, it's a global state *)
+  Arg.parse
+    [ ( "-staged",
+        Arg.Unit (function () -> opts.staged <- true),
+        "Run staged interpreter." );
+
+      ( "-run",
+        Arg.Unit (function () -> opts.run <- true),
+        "Run specialized code. Makes sense only in staged mode." );
+
+      ( "-parse-only",
+        Arg.Unit (function () -> opts.parse_only <- true),
+        "Do only parsing in specialization time" );
+
+      ( "-eval-S",
+        Arg.Unit (function () -> opts.eval_S <- true),
+        "Specialize applications of S. WARNING: Results in loops most of the time." );
+
+      ( "-specialize-eof",
+        Arg.Unit (function () -> opts.specialize_eof <- true),
+        "Specialize EOF branches of \"read\"('@') calls." );
+
+      ( "-specialize-cc",
+        Arg.Unit (function () -> opts.specialize_cc <- true),
+        "Specialize continuation calls. WARNING: May result in loops." );
+
+      ( "-specialize-comp-eq",
+        Arg.Unit (function () -> opts.specialize_comp_eq <- true),
+        "Specialize \"equal\" branches of conditionals." );
+
+      ( "-specialize-comp-neq",
+        Arg.Unit (function () -> opts.specialize_comp_neq <- true),
+        "Specialize \"not equal\" branches of conditionals." );
+
+    ] (fun annon_arg -> match !input_file with
+                        | None -> input_file := Some annon_arg
+                        | Some _ -> raise (Failure "Input file is already specified.")) usage;
+
+  match !input_file with
+  | None -> raise (Failure "Input file is not specified.")
+  | Some input_file -> opts.input_file <- input_file;
+
+  let contents = slurp opts.input_file in
+
+  let (p, pos)      = parse_var contents in
+  let exp   : exp   = tr_v (abs_elim p) in
+  let exp_s : exp_s = tr exp in
+
+  if opts.staged then
+    begin
+      if opts.parse_only then
+        Print_code.print_code Format.std_formatter
+          .< UnlambdaCont.eval .~ (lift_exp_s exp_s) None [] >.
+      else begin
+        let code = UnlambdaStaged.eval exp_s None []; in
+        Print_code.print_code Format.std_formatter code;
+        if opts.run then
+          let _ = Runcode.run code in
+          ()
+      end
+    end
+  else begin
+    Printf.printf "running reference implementation\n";
+    Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
+    let _ = UnlambdaInterp.eval exp None (fun x _ -> x) in
+    ()
+  end

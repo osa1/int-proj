@@ -14,10 +14,10 @@ let rec apply_cont (e1 : exp_s) (cc : char option) (cont : cont list) : exp_s co
       | D_S -> apply_cont (D1_S e2) cc rest
       | _   -> eval e2 cc (ApplyTo e1 :: rest)
     end
-  | ApplyTo f :: rest -> apply_staged f e1 cc rest
-  | ApplyDelayed a :: rest -> apply_staged e1 a cc rest
+  | ApplyTo f :: rest -> apply f e1 cc rest
+  | ApplyDelayed a :: rest -> apply e1 a cc rest
 
-and apply_staged (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_s code =
+and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_s code =
   match e1 with
   | K_S -> apply_cont (K1_S e2) cc cont
   | K1_S x -> apply_cont x cc cont
@@ -33,7 +33,7 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list)
       (* eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont *)
   | I_S -> apply_cont e2 cc cont
   | V_S -> apply_cont V_S cc cont
-  | C_S -> apply_staged e2 (Cont_S cont) cc cont
+  | C_S -> apply e2 (Cont_S cont) cc cont
   | Cont_S cont' ->
       (* apply_cont e2 cont'
        * We're using interpreter here to break the loop *)
@@ -50,7 +50,7 @@ and apply_staged (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list)
          | None   ->
              (* UnlambdaCont.apply e2 V_S c .~ (lift_conts cont) *)
              (* TODO: Explain the optimization here *)
-             .~ (apply_staged e2 V_S None cont)
+             .~ (apply e2 V_S None cont)
 
          | Some _ -> UnlambdaCont.apply e2 I_S c .~ (lift_conts cont)
        >.

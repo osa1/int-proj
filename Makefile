@@ -8,7 +8,7 @@ supercomp: Supercomp.ml
 unlambda_idris: Unlambda.idr
 	idris $< -o $@
 
-unlambda_metaocaml: Syntax.cmo UnlambdaInterp.cmo UnlambdaCont.cmo Lift.cmo UnlambdaStaged.cmo UnlambdaMain.ml
+unlambda_metaocaml: Syntax.cmo UnlambdaInterp.cmo UnlambdaCont.cmo Lift.cmo CmdArgs.cmo UnlambdaStaged.cmo UnlambdaMain.ml
 	metaocamlc $^ -o $@ -g
 
 qbf_metaocaml: QBFSyntax.cmo QBFEval.cmo QBFMain.ml
