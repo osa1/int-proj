@@ -1,7 +1,8 @@
 (* Staged interpreter *)
 
-open Syntax
+open CmdArgs
 open Lift
+open Syntax
 
 let rec apply_cont (e1 : exp_s) (cc : char option) (cont : cont list) : exp_s code =
   (*Printf.printf "current term: %s, cont stack depth: %d\n"
@@ -24,21 +25,20 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
   | S_S -> apply_cont (S1_S e2) cc cont
   | S1_S x -> apply_cont (S2_S (x, e2)) cc cont
   | S2_S (x, y) ->
-      (* .< UnlambdaCont.eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cont >. *)
-      (*
-       *)
-      let app_1 = eval (Backtick_S (x, e2)) cc [] in
-      let app_2 = eval (Backtick_S (y, e2)) cc [] in
-      .< UnlambdaCont.eval (Backtick_S (.~app_1, .~app_2)) cc .~ (lift_conts cont) >.
-      (* eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont *)
+      if opts.eval_S then
+        eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
+      else
+        let app_1 = eval (Backtick_S (x, e2)) cc [] in
+        let app_2 = eval (Backtick_S (y, e2)) cc [] in
+        .< UnlambdaCont.eval (Backtick_S (.~app_1, .~app_2)) cc .~ (lift_conts cont) >.
   | I_S -> apply_cont e2 cc cont
   | V_S -> apply_cont V_S cc cont
   | C_S -> apply e2 (Cont_S cont) cc cont
   | Cont_S cont' ->
-      (* apply_cont e2 cont'
-       * We're using interpreter here to break the loop *)
-      (* .< apply_cont .~ (lift_exp_s e2) .~ (lift_conts cont') >. *)
-      apply_cont e2 cc cont'
+      if opts.eval_cc then
+        apply_cont e2 cc cont'
+      else
+        .< UnlambdaCont.apply_cont .~ (lift_exp_s e2) cc .~ (lift_conts cont') >.
   | D_S -> apply_cont e2 cc cont
   | D1_S f -> eval f cc (ApplyDelayed e2 :: cont)
   | Print_S c -> .< let _ = print_char c in .~ (apply_cont e2 cc cont) >.
@@ -48,21 +48,17 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
                  with _ -> None in
          match c with
          | None   ->
-             (* UnlambdaCont.apply e2 V_S c .~ (lift_conts cont) *)
-             (* TODO: Explain the optimization here *)
-             .~ (apply e2 V_S None cont)
-
-         | Some _ -> UnlambdaCont.apply e2 I_S c .~ (lift_conts cont)
+            .~ (if opts.eval_eof then
+                  apply e2 V_S None cont
+                else
+                  .< UnlambdaCont.apply e2 V_S None .~ (lift_conts cont) >.)
+         | Some _ ->
+             (* TODO: Briefly talk about why we can't use concrete character
+              * here in staged computation to specialize further *)
+             UnlambdaCont.apply e2 I_S c .~ (lift_conts cont)
        >.
-  | Cmp_S c ->
-      (* TODO: we're being overly conservative here, we can have static values
-       * in current_char *)
-      .< UnlambdaCont.apply e2 (if Some c = cc then I_S else V_S) cc
-                            .~ (lift_conts cont) >.
-  | Repr_S ->
-      (* TODO: Same problem here, we may have statically known value *)
-      .< UnlambdaCont.apply e2 (match cc with None -> V_S | Some c -> Print_S c) cc
-                            .~ (lift_conts cont) >.
+  | Cmp_S c -> apply e2 (if Some c = cc then I_S else V_S) cc cont
+  | Repr_S -> apply e2 (match cc with None -> V_S | Some c -> Print_S c) cc cont
   | Backtick_S _ ->
       raise (Failure "Can't apply to backtick.")
 

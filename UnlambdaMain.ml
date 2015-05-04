@@ -75,25 +75,17 @@ let _ =
         Arg.Unit (function () -> opts.eval_S <- true),
         "Specialize applications of S. WARNING: Results in loops most of the time." );
 
-      ( "-specialize-eof",
-        Arg.Unit (function () -> opts.specialize_eof <- true),
+      ( "-eval-eof",
+        Arg.Unit (function () -> opts.eval_eof <- true),
         "Specialize EOF branches of \"read\"('@') calls." );
 
-      ( "-specialize-cc",
-        Arg.Unit (function () -> opts.specialize_cc <- true),
+      ( "-eval-cc",
+        Arg.Unit (function () -> opts.eval_cc <- true),
         "Specialize continuation calls. WARNING: May result in loops." );
-
-      ( "-specialize-comp-eq",
-        Arg.Unit (function () -> opts.specialize_comp_eq <- true),
-        "Specialize \"equal\" branches of conditionals." );
-
-      ( "-specialize-comp-neq",
-        Arg.Unit (function () -> opts.specialize_comp_neq <- true),
-        "Specialize \"not equal\" branches of conditionals." );
 
     ] (fun annon_arg -> match !input_file with
                         | None -> input_file := Some annon_arg
-                        | Some _ -> raise (Failure "Input file is already specified.")) usage;
+                        | Some i -> raise (Failure ("Input file is already specified as " ^ i))) usage;
 
   match !input_file with
   | None -> raise (Failure "Input file is not specified.")

@@ -7,10 +7,8 @@ type cmd_opts =
     mutable run : bool;                 (* run specialized program *)
     mutable parse_only : bool;          (* do only parsing in specialization time *)
     mutable eval_S : bool;              (* evaluate S calls *)
-    mutable specialize_eof : bool;      (* specialize None branch of "read"('@') *)
-    mutable specialize_cc : bool;       (* specialize continuation calls *)
-    mutable specialize_comp_eq : bool;  (* specialize "equal" branches of conditionals *)
-    mutable specialize_comp_neq : bool; (* specialize "not equal" branches of conditionals *)
+    mutable eval_eof : bool;            (* specialize None branch of "read"('@') *)
+    mutable eval_cc : bool;             (* specialize continuation calls *)
   }
 
 let init_opts input_file =
@@ -19,10 +17,8 @@ let init_opts input_file =
     run = false;
     parse_only = false;
     eval_S = false;
-    specialize_eof = false;
-    specialize_cc = false;
-    specialize_comp_eq = false;
-    specialize_comp_neq = false;
+    eval_eof = false;
+    eval_cc = false;
   }
 
 (* FIXME: Remove global state *)
