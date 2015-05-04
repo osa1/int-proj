@@ -2,7 +2,6 @@
 
 open Syntax
 open Lift
-open Unlambda
 
 let slurp file_path =
   let rec iter chan =
@@ -40,8 +39,7 @@ let run_tests () =
   List.iter (function (l, r) ->
     let eliminated = tr_v (abs_elim (fst @@ parse_var l)) in
     let expected   = fst @@ parse r in
-    let evaluated  = trb (eval_ref (tr eliminated) []) in
-    current_char := None;
+    let evaluated  = trb (UnlambdaCont.eval (tr eliminated) None []) in
     if evaluated <> expected then
       raise (Failure ("Evaluated form is not equal to expected form.\n" ^
                       "Evaluated: " ^ exp_to_string evaluated ^ "\n" ^
@@ -61,13 +59,14 @@ let _ =
 
   match Array.to_list Sys.argv with
   | [_; _; "stage0"] ->
-      Print_code.print_code Format.std_formatter .< eval_ref .~ (lift_exp_s exp_s) [] >.;
-  | [_; _; "stage"] ->
-      let _ = Print_code.print_code Format.std_formatter (eval_staged exp_s []) in
+      Print_code.print_code Format.std_formatter .< UnlambdaCont.eval .~ (lift_exp_s exp_s) None [] >.;
+  | (_ :: _ :: "stage" :: _) ->
+      let _ = Print_code.print_code Format.std_formatter (UnlambdaStaged.eval exp_s None []) in
       if Array.length Sys.argv == 4 && String.compare Sys.argv.(3) "run" == 0 then
-        let _ = Runcode.(!.) (eval_staged exp_s []) in ()
+        let _ = Runcode.(!.) (UnlambdaStaged.eval exp_s None []) in ()
   | [_; _; "cont"] ->
-      let _ = eval_ref exp_s [] in ()
+      let _ = UnlambdaCont.eval exp_s None [] in ()
   | _ ->
+      Printf.printf "running reference implementation\n";
       Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);
-      let _ = eval exp None (fun x _ -> x) in ()
+      let _ = UnlambdaInterp.eval exp None (fun x _ -> x) in ()
