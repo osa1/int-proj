@@ -1,5 +1,18 @@
 (* Staged interpreter *)
 
+(*
+ * NOTE: I did the mistake of evaluating only the subterms in some cases. The
+ * problem was that evaluating a subterm may update "current character" state,
+ * so combining the results is tricky and leads to more complex staged
+ * interpreter functions.  I think one possible nice way to solve this is to
+ * use 1) a local(maybe module-level) state or state monad(which is not nice to
+ * use on OCaml) 2) use "static-dynamic" values as described in
+ * "Supercompilation by Staging" by Jun Inoue.
+ * (http://meta2014.pereslavl.ru/papers/2014_Inoue__Supercompiling_with_Staging.pdf)
+ *
+ * It's fixed now, but we lost some opportunities for optimizations.
+ *)
+
 open CmdArgs
 open Lift
 open Syntax
@@ -28,9 +41,10 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
       if opts.eval_S then
         eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
       else
-        let app_1 = eval (Backtick_S (x, e2)) cc [] in
-        let app_2 = eval (Backtick_S (y, e2)) cc [] in
-        .< UnlambdaCont.eval (Backtick_S (.~app_1, .~app_2)) cc .~ (lift_conts cont) >.
+        .< UnlambdaCont.eval (Backtick_S
+                               (Backtick_S ( .~ (lift_exp_s x), .~ (lift_exp_s e2)),
+                                Backtick_S ( .~ (lift_exp_s y), .~ (lift_exp_s e2))))
+                             cc .~ (lift_conts cont) >.
   | I_S -> apply_cont e2 cc cont
   | V_S -> apply_cont V_S cc cont
   | C_S -> apply e2 (Cont_S cont) cc cont

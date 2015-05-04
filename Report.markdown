@@ -66,6 +66,11 @@ inputs. In this experiment we compare tools for these properties:
      compilation.
 
 
+* Are there any gradualness involved? Can I start removing annotations in both
+  implementations and assume that my programs will work at any point? Or when I
+  start with non-annotated programs, can I gradually add annotations and have
+  something that runs at all stages?
+
 ---
 
 [^1]: Mentioned in [Intorduction to Supercompilation, Sørensen and
