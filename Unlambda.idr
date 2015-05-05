@@ -146,9 +146,6 @@ mutual
           v1 => eval arg2 c' (\v2, c'' => apply v1 v2 c'' cont)
   eval exp c cont = cont exp c
 
-loopPE : IO Exp
-loopPE = eval (parseStr loopingPgm) Nothing (\e, _ => return e)
-
 data PEOpts = PE
                 Bool   -- ^ eval S applications statically
                        --   (most of the time results in loops)
@@ -250,6 +247,28 @@ mutual
 -------------------------------------------------
 -- Optimizer that's supposed to run in P.E. time.
 
+-- See the call site for explanation
+-- TODO: Make sure this is working as expected.
+eofCond : ExpS -> ExpS -> ExpS
+eofCond t f =
+    Backtick_S (Backtick_S (Backtick_S cond t) f) I_S
+  where
+    cond : ExpS
+    cond =
+      Backtick_S (Backtick_S (Backtick_S S_S (Backtick_S K_S C_S))
+          (Backtick_S
+            (Backtick_S S_S
+              (Backtick_S K_S
+                (Backtick_S S_S
+                  (Backtick_S K_S
+                    (Backtick_S K_S
+                      K_S)))))
+            (Backtick_S
+              (Backtick_S S_S S_S)
+              (Backtick_S K_S
+                (Backtick_S K_S (Backtick_S K_S I_S))))))
+        (Backtick_S Read_S I_S)
+
 mutual
   apply_cont_static : [static] PEOpts -> [static] ExpS -> [static] Maybe Char
             -> [static] List Continuation -> (ExpS, List Continuation)
@@ -308,10 +327,20 @@ mutual
         (e2', ApplyTo (Print_S ch) :: conts')
       E_S x    => (x, [])
       Read_S   =>
-        -- For the reasons described in Print_S case, we can't do `evalEOF`
-        -- optimizations here. We have to leave it to the last stage where
-        -- we do compilation to meta language.
-        (Backtick_S Read_S e2, conts)
+        if evalEOF
+           then
+             let (eofCase, eofConts) = eval_static opts e2 Nothing conts
+             in -- We need to generate a term in object level which means
+                -- "read a character, evaluate this if it's EOF, evaluate that
+                -- otherwise"
+                --
+                -- (eofCond eofCase e2, conts)
+                --
+                -- But this would be incorrect, because specialized case will have
+                -- different continuations. So we should replace it with a
+                -- continuation call:
+                (eofCond (Backtick_S (Cont_S eofConts) eofCase) e2, conts)
+           else (Backtick_S Read_S e2, conts)
       Cmp_S c' => apply_static opts e2 (if Just c' == c then I_S else V_S) c conts
       Repr_S   => apply_static opts e2 (case c of Nothing => V_S; Just c' => Print_S c') c conts
       Backtick_S => error "Can't apply backtick"
@@ -340,4 +369,41 @@ peHello = eval (parseStr hello) Nothing (\e, _ => return e)
 peHello1 : IO ExpS
 peHello1 =
     let (exp, conts) = eval_static (PE True True True) (tr $ parseStr hello) Nothing []
+    in eval1 exp Nothing conts
+
+peLoop : IO Exp
+peLoop = eval (parseStr loopingPgm) Nothing (\e, _ => return e)
+
+peLoopTerminateTry : IO ExpS
+peLoopTerminateTry =
+    let (exp, conts) = eval_static (PE False True True) (tr $ parseStr loopingPgm) Nothing []
+    in eval1 exp Nothing conts
+
+-- Optimize non-terminating program. Loops forever, because we evaluate S applications.
+peLoopTerminateOptLoop : (ExpS, List Continuation)
+peLoopTerminateOptLoop = eval_static (PE True True True) (tr $ parseStr loopingPgm) Nothing []
+
+-- Optimize non-termianting program. Terminates because we don't evaluate S applications.
+peLoopTerminateOptDon'tLoop : (ExpS, List Continuation)
+peLoopTerminateOptDon'tLoop = eval_static (PE False True True) (tr $ parseStr loopingPgm) Nothing []
+
+peLoop1 : IO ExpS
+peLoop1 =
+    let (exp, conts) = eval_static (PE True True True) (tr $ parseStr loopingPgm) Nothing []
+    in eval1 exp Nothing conts
+
+peEOFTest : IO Exp
+peEOFTest = eval (parseStr eofTest) Nothing (\e, _ => return e)
+
+peEOFTest1 : IO ExpS
+peEOFTest1 =
+    let (exp, conts) = eval_static (PE True True True) (tr $ parseStr eofTest) Nothing []
+    in eval1 exp Nothing conts
+
+pePrint : IO Exp
+pePrint = eval (parseStr printTest) Nothing (\e, _ => return e)
+
+pePrint1 : IO ExpS
+pePrint1 =
+    let (exp, conts) = eval_static (PE True True True) (tr $ parseStr printTest) Nothing []
     in eval1 exp Nothing conts
