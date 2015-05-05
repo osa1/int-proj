@@ -68,37 +68,8 @@ eqExp (Cmp c1) (Cmp c2) = c1 == c2
 eqExp Repr Repr = True
 eqExp _ _ = False
 
-
 ------------
 -- * Parsing
-
-skipComment : IO ()
-skipComment = do
-  c <- getChar
-  if c == '\n' then return () else skipComment
-
-parse : IO Exp
-parse = do
-  c <- getChar
-  case c of
-    '#'  => do skipComment; parse
-    '`'  => Backtick <$> parse <*> parse
-    '.'  => Print <$> getChar
-    'r'  => return $ Print '\n'
-    'k'  => return K
-    's'  => return S
-    'i'  => return I
-    'v'  => return V
-    'c'  => return C
-    'd'  => return D
-    'e'  => E <$> parse
-    '@'  => return Read
-    '?'  => Cmp <$> getChar
-    '|'  => return Repr
-    ' '  => parse
-    '\n' => parse
-    '\t' => parse
-    -- how to error in idris?
 
 partial
 parseStr : String -> Exp
@@ -153,7 +124,7 @@ mutual
       S2 x y => eval (Backtick (Backtick x e2) (Backtick y e2)) c cont
       I      => cont e2 c
       V      => cont V c
-      C      => cont (Cont cont) c
+      C      => apply e2 (Cont cont) c cont
       Cont cont' => cont' e2 c
       D      => cont e2 c
       D1 f   => eval f c (\v1, c' => apply v1 e2 c' cont)
@@ -175,37 +146,9 @@ mutual
           v1 => eval arg2 c' (\v2, c'' => apply v1 v2 c'' cont)
   eval exp c cont = cont exp c
 
-partiallyEvaluated : Maybe Char -> (Exp -> Maybe Char -> IO Exp) -> IO Exp
-partiallyEvaluated = eval (parseStr hello)
-
-partiallyEvaluated1 : (Exp -> Maybe Char -> IO Exp) -> IO Exp
-partiallyEvaluated1 = eval (parseStr hello) Nothing
-
-partiallyEvaluated2 : IO Exp
-partiallyEvaluated2 = eval (parseStr hello) Nothing (\e, _ => return e)
-
-partiallyEvaluatedEOF : Maybe Char -> (Exp -> Maybe Char -> IO Exp) -> IO Exp
-partiallyEvaluatedEOF = eval (parseStr eofTest)
-
-partiallyEvaluatedEOF1 : (Exp -> Maybe Char -> IO Exp) -> IO Exp
-partiallyEvaluatedEOF1 = eval (parseStr eofTest) Nothing
-
-partiallyEvaluatedEOF2 : IO Exp
-partiallyEvaluatedEOF2 = eval (parseStr eofTest) Nothing (\e, _ => return e)
-
-partiallyEvaluatedPrint : Maybe Char -> (Exp -> Maybe Char -> IO Exp) -> IO Exp
-partiallyEvaluatedPrint = eval (parseStr printTest)
-
-partiallyEvaluatedPrint1 : (Exp -> Maybe Char -> IO Exp) -> IO Exp
-partiallyEvaluatedPrint1 = eval (parseStr printTest) Nothing
-
-partiallyEvaluatedPrint2 : IO Exp
-partiallyEvaluatedPrint2 = eval (parseStr printTest) Nothing (\e, _ => return e)
-
 loopPE : IO Exp
 loopPE = eval (parseStr loopingPgm) Nothing (\e, _ => return e)
 
--- TODO: It seems like Idris doesn't have records. Make sure.
 data PEOpts = PE
                 Bool   -- ^ eval S applications statically
                        --   (most of the time results in loops)
@@ -261,56 +204,124 @@ tr (E e) = E_S (tr e)
 tr Read = Read_S
 tr (Cmp c) = Cmp_S c
 
+-- Interpreter for the alternative representation of continuations
+
 mutual
-  apply_cont : [static] PEOpts -> ExpS -> Maybe Char -> List Continuation -> (ExpS, List Continuation)
-  apply_cont opts e1 cc conts =
+  apply_cont : ExpS -> Maybe Char ->  List Continuation -> IO ExpS
+  apply_cont e1 cc conts =
+    case conts of
+      [] => return e1
+      DelayGuard e2 :: rest =>
+        case e1 of
+          D_S => apply_cont (D1_S e2) cc rest
+          _   => eval1 e2 cc (ApplyTo e1 :: rest)
+      ApplyTo f :: rest => apply1 f e1 cc rest
+      ApplyDelayed a :: rest => apply1 e1 a cc rest
+
+  apply1 : ExpS -> ExpS -> Maybe Char ->  List Continuation -> IO ExpS
+  apply1 e1 e2 c conts =
+    case e1 of
+      K_S      => apply_cont (K1_S e2) c conts
+      K1_S x   => apply_cont x c conts
+      S_S      => apply_cont (S1_S e2) c conts
+      S1_S x   => apply_cont (S2_S x e2) c conts
+      S2_S x y => eval1 (Backtick_S (Backtick_S x e2) (Backtick_S y e2)) c conts
+      I_S      => apply_cont e2 c conts
+      V_S      => apply_cont V_S c conts
+      C_S      => apply1 e2 (Cont_S conts) c conts
+      Cont_S conts' => apply_cont e2 c conts'
+      D_S      => apply_cont e2 c conts
+      D1_S f   => eval1 f c (ApplyDelayed e2 :: conts)
+      Print_S ch => do putChar ch; apply_cont e2 c conts
+      E_S x    => return x
+      Read_S   => do
+        c' <- ioe_run (ioe_lift getChar) (\_ => return Nothing) (return . Just)
+        apply1 e2 (case c' of Nothing => V_S; Just _ => I_S) c' conts
+      Cmp_S c' => apply1 e2 (if Just c' == c then I_S else V_S) c conts
+      Repr_S   => apply1 e2 (case c of Nothing => V_S; Just c' => Print_S c') c conts
+      Backtick_S => error "Can't apply backtick"
+
+  eval1 : ExpS -> Maybe Char -> List Continuation -> IO ExpS
+  eval1 exp cc conts =
+    case exp of
+      Backtick_S e1 e2 => eval1 e1 cc (DelayGuard e2 :: conts)
+      _                => apply_cont exp cc conts
+
+-------------------------------------------------
+-- Optimizer that's supposed to run in P.E. time.
+
+mutual
+  apply_cont_static : [static] PEOpts -> [static] ExpS -> [static] Maybe Char
+            -> [static] List Continuation -> (ExpS, List Continuation)
+  apply_cont_static opts e1 cc conts =
     case conts of
       [] => (e1, [])
       DelayGuard e2 :: rest =>
         case e1 of
-          D_S => apply_cont opts (D1_S e2) cc rest
+          D_S => apply_cont_static opts (D1_S e2) cc rest
           _   => eval_static opts e2 cc (ApplyTo e1 :: rest)
       ApplyTo f :: rest => apply_static opts f e1 cc rest
       ApplyDelayed a :: rest => apply_static opts e1 a cc rest
 
-  apply_static : [static] PEOpts -> ExpS -> ExpS -> Maybe Char
-              -> List Continuation -> (ExpS, List Continuation)
+  apply_static : [static] PEOpts -> [static] ExpS -> [static] ExpS -> [static] Maybe Char
+              -> [static] List Continuation -> (ExpS, List Continuation)
   apply_static opts@(PE evalS evalEOF evalCC) e1 e2 c conts =
     case e1 of
-      K_S      => apply_cont opts (K1_S e2) c conts
-      K1_S x   => apply_cont opts x c conts
-      S_S      => apply_cont opts (S1_S e2) c conts
-      S1_S x   => apply_cont opts (S2_S x e2) c conts
+      K_S      => apply_cont_static opts (K1_S e2) c conts
+      K1_S x   => apply_cont_static opts x c conts
+      S_S      => apply_cont_static opts (S1_S e2) c conts
+      S1_S x   => apply_cont_static opts (S2_S x e2) c conts
       S2_S x y =>
         if evalS
           then eval_static opts (Backtick_S (Backtick_S x e2) (Backtick_S y e2)) c conts
           else
             -- my guess is that partial evaluator will just keep evaluating stuff.
             (Backtick_S (Backtick_S x e2) (Backtick_S y e2), conts)
-      I_S      => apply_cont opts e2 c conts
-      V_S      => apply_cont opts V_S c conts
+      I_S      => apply_cont_static opts e2 c conts
+      V_S      => apply_cont_static opts V_S c conts
       C_S      => apply_static opts e2 (Cont_S conts) c conts
-      Cont_S conts' => apply_cont opts e2 c conts'
-      D_S      => apply_cont opts e2 c conts
+      Cont_S conts' =>
+        if evalCC then apply_cont_static opts e2 c conts'
+                  else (e2, conts')
+      D_S      => apply_cont_static opts e2 c conts
       D1_S f   => eval_static opts f c (ApplyDelayed e2 :: conts)
       Print_S ch =>
-        let (e2', conts') = apply_cont opts e2 c conts in
-        -- TODO: Should I return Print_S and add e2 to continuations instead?
-        (Backtick_S (Print_S ch) e2', conts')
+        -- Let's think about what to do here: We should generate a code that
+        -- prints the character, and then continues evaluating the argument.
+        -- The problem is, in a staged interpreter this is not possible, unless
+        -- we have a AST node that says exactly that.(e.g. a "print this char
+        -- and evaluate this" node) I think this is one of the limitation of
+        -- partial evaluation + staged interpreters approach. In a multi-stage
+        -- language, we compile the AST representation to meta language, and
+        -- we can mix meta language terms to our compiled representation, so
+        -- it's possible to compile this term to:
+        --
+        -- > print_char ch; evaluate <rest>
+        --
+        -- Indeed, this is exactly what we're doing in MetaOCaml implementation.
+        --
+        -- Luckily, we can build a term that says exactly "print this and evaluate
+        -- that", only now we'll have "that" part already evaluated a bit in
+        -- partial evaluation time:
+        --
+        let (e2', conts') = apply_cont_static opts e2 c conts in
+        (e2', ApplyTo (Print_S ch) :: conts')
       E_S x    => (x, [])
       Read_S   =>
-        -- Finally! I think I've found a limitation here...
+        -- For the reasons described in Print_S case, we can't do `evalEOF`
+        -- optimizations here. We have to leave it to the last stage where
+        -- we do compilation to meta language.
         (Backtick_S Read_S e2, conts)
       Cmp_S c' => apply_static opts e2 (if Just c' == c then I_S else V_S) c conts
       Repr_S   => apply_static opts e2 (case c of Nothing => V_S; Just c' => Print_S c') c conts
       Backtick_S => error "Can't apply backtick"
 
-  eval_static : [static] PEOpts -> ExpS -> Maybe Char
-             -> List Continuation -> (ExpS, List Continuation)
+  eval_static : [static] PEOpts -> [static] ExpS -> [static] Maybe Char
+             -> [static] List Continuation -> (ExpS, List Continuation)
   eval_static opts exp cc conts =
     case exp of
       Backtick_S e1 e2 => eval_static opts e1 cc (DelayGuard e2 :: conts)
-      _                => apply_cont opts exp cc conts
+      _                => apply_cont_static opts exp cc conts
 
 optimizedHello : (ExpS, List Continuation)
 optimizedHello = eval_static (PE True True True) (tr $ parseStr hello) Nothing []
@@ -319,7 +330,14 @@ main : IO ()
 main = do
     _ <- eval (parseStr hello) Nothing (\e, _ => return e)
     putStrLn "Done"
-    -- exp <- parse
-    -- eval exp Nothing (\e, _ => return e)
-    -- -- -- print exp
-    -- putStrLn "Done"
+
+-------------------------------
+-- Partially evaluated programs
+
+peHello : IO Exp
+peHello = eval (parseStr hello) Nothing (\e, _ => return e)
+
+peHello1 : IO ExpS
+peHello1 =
+    let (exp, conts) = eval_static (PE True True True) (tr $ parseStr hello) Nothing []
+    in eval1 exp Nothing conts
