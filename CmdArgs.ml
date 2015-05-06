@@ -4,6 +4,7 @@ type cmd_opts =
   { mutable input_file : string;
     mutable staged : bool;              (* use staged interpreters. all the arguments
                                            below this make sense only when this is enabled *)
+    mutable compile : bool;
     mutable run : bool;                 (* run specialized program *)
     mutable parse_only : bool;          (* do only parsing in specialization time *)
     mutable eval_S : bool;              (* evaluate S calls *)
@@ -14,6 +15,7 @@ type cmd_opts =
 let init_opts input_file =
   { input_file = input_file;
     staged = false;
+    compile = false;
     run = false;
     parse_only = false;
     eval_S = false;

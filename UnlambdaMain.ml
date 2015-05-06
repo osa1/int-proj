@@ -63,6 +63,10 @@ let _ =
         Arg.Unit (function () -> opts.staged <- true),
         "Run staged interpreter." );
 
+      ( "-compile",
+        Arg.Unit (function () -> opts.compile <- true),
+        "Compile and run compiled program.");
+
       ( "-run",
         Arg.Unit (function () -> opts.run <- true),
         "Run specialized code. Makes sense only in staged mode." );
@@ -97,6 +101,9 @@ let _ =
   let exp   : exp   = tr_v (abs_elim p) in
   let exp_s : exp_s = tr exp in
 
+  if opts.staged && opts.compile then
+    raise (Failure "Both -compile and -staged are provided.");
+
   if opts.staged then
     begin
       if opts.parse_only then
@@ -110,6 +117,9 @@ let _ =
           ()
       end
     end
+  else if opts.compile then
+    let _ = Runcode.run (UnlambdaCompiler.compile exp_s) (fun x -> x) in
+    ()
   else begin
     Printf.printf "running reference implementation\n";
     Printf.printf "last position: %d, string length: %d\n" pos (String.length contents);

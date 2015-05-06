@@ -5,8 +5,8 @@ ALL: unlambda_idris unlambda_metaocaml
 unlambda_idris: Unlambda.idr
 	idris $< -o $@
 
-unlambda_metaocaml: Syntax.cmo UnlambdaInterp.cmo UnlambdaCont.cmo Lift.cmo CmdArgs.cmo UnlambdaStaged.cmo UnlambdaMain.ml
-	metaocamlc $^ -o $@ -g
+unlambda_metaocaml: Syntax.cmo UnlambdaInterp.cmo UnlambdaCont.cmo Lift.cmo CmdArgs.cmo UnlambdaStaged.cmo UnlambdaCompiler.cmo UnlambdaMain.ml
+	metaocamlc -rectypes $^ -o $@ -g
 
 qbf_metaocaml: QBFSyntax.cmo QBFEval.cmo QBFMain.ml
 	metaocamlc $^ -o $@ -g
@@ -22,6 +22,12 @@ UnlambdaInterp.cmo: Syntax.cmo UnlambdaInterp.ml
 
 UnalamdaCont.cmo: Syntax.cmo UnlambdaCont.ml
 	metaocamlc -c $^ -g
+
+UnlambdaCompiler.cmo: UnlambdaFuns.cmo UnlambdaCompiler.ml
+	metaocamlc -rectypes -c $^ -g
+
+UnlambdaFuns.cmo: UnlambdaFuns.ml
+	metaocamlc -rectypes -c $^ -g
 
 QBFEval.cmo: QBFSyntax.cmo QBFEval.ml
 	metaocamlc -c $^ -g
