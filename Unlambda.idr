@@ -381,9 +381,15 @@ main = do
 
 ------------------------------------------------
 -- Double the automation, double the confusion..
+--
 -- Some experiments with Idris partial evalutor. It's very hard to see if
 -- partial evaluation is working as expected, since there's no easy way to see
 -- generated code.
+--
+-- See also: https://github.com/idris-lang/Idris-dev/issues/2234
+--
+-- (I hate working with research-level software.)
+--
 
 -- This is partially evaluated just fine...
 my_pow_sd : [static] Nat -> Nat -> Nat
