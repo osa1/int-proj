@@ -69,7 +69,7 @@ eqExp Repr Repr = True
 eqExp _ _ = False
 
 ------------
--- * Parsing
+-- Parsing
 
 partial
 parseStr : String -> Exp
@@ -109,10 +109,9 @@ parseStr str = fst $ iter 0
         '\n' => iter (i + 1)
         '\t' => iter (i + 1)
 
---------------
--- * Execution
+---------------------------
+-- Reference implementation
 
--- | Reference implementation
 mutual
   apply : Exp -> Exp -> Maybe Char -> (Exp -> Maybe Char -> IO Exp) -> IO Exp
   apply e1 e2 c cont =
@@ -145,6 +144,9 @@ mutual
           D  => cont (D1 arg2) c'
           v1 => eval arg2 c' (\v2, c'' => apply v1 v2 c'' cont)
   eval exp c cont = cont exp c
+
+-----------------------------------------------------
+-- Syntax and settings for partial evaluation version
 
 data PEOpts = PE
                 Bool   -- ^ eval S applications statically
@@ -201,6 +203,7 @@ tr (E e) = E_S (tr e)
 tr Read = Read_S
 tr (Cmp c) = Cmp_S c
 
+------------------------------------------------------------------
 -- Interpreter for the alternative representation of continuations
 
 mutual
@@ -248,26 +251,16 @@ mutual
 -- Optimizer that's supposed to run in P.E. time.
 
 -- See the call site for explanation
--- TODO: Make sure this is working as expected.
 eofCond : ExpS -> ExpS -> ExpS
 eofCond t f =
-    Backtick_S (Backtick_S (Backtick_S cond t) f) I_S
-  where
-    cond : ExpS
-    cond =
-      Backtick_S (Backtick_S (Backtick_S S_S (Backtick_S K_S C_S))
-          (Backtick_S
-            (Backtick_S S_S
-              (Backtick_S K_S
-                (Backtick_S S_S
-                  (Backtick_S K_S
-                    (Backtick_S K_S
-                      K_S)))))
-            (Backtick_S
-              (Backtick_S S_S S_S)
-              (Backtick_S K_S
-                (Backtick_S K_S (Backtick_S K_S I_S))))))
-        (Backtick_S Read_S I_S)
+  Backtick_S
+    (Print_S '\n')
+    (Backtick_S (Backtick_S (Backtick_S (Backtick_S (Backtick_S
+      (Backtick_S S_S (Backtick_S K_S C_S))
+      (Backtick_S (Backtick_S S_S (Backtick_S K_S (Backtick_S S_S (Backtick_S K_S
+        (Backtick_S K_S K_S)))))
+        (Backtick_S (Backtick_S S_S S_S) (Backtick_S K_S (Backtick_S K_S (Backtick_S K_S I_S))))))
+          (Backtick_S Read_S I_S)) t) f) I_S)
 
 mutual
   apply_cont_static : [static] PEOpts -> [static] ExpS -> [static] Maybe Char
@@ -307,13 +300,13 @@ mutual
       Print_S ch =>
         -- Let's think about what to do here: We should generate a code that
         -- prints the character, and then continues evaluating the argument.
-        -- The problem is, in a staged interpreter this is not possible, unless
-        -- we have a AST node that says exactly that.(e.g. a "print this char
-        -- and evaluate this" node) I think this is one of the limitation of
-        -- partial evaluation + staged interpreters approach. In a multi-stage
-        -- language, we compile the AST representation to meta language, and
-        -- we can mix meta language terms to our compiled representation, so
-        -- it's possible to compile this term to:
+        -- The problem is, in a compiler from object language to object
+        -- language, this is not possible, unless we have a AST node that says
+        -- exactly that. I think this is one of the limitation of partial
+        -- evaluation + staged interpreters approach(Sperber and Thiemann '96).
+        -- In a multi-stage language, we compile the AST representation to meta
+        -- language, and we can mix meta language terms to our compiled
+        -- code, so it's possible to compile this term to:
         --
         -- > print_char ch; evaluate <rest>
         --
@@ -325,21 +318,47 @@ mutual
         --
         let (e2', conts') = apply_cont_static opts e2 c conts in
         (e2', ApplyTo (Print_S ch) :: conts')
+        --
+        -- This worked fine, but as we'll see in Read_S case, it's not always
+        -- as simple.
+        --
       E_S x    => (x, [])
       Read_S   =>
         if evalEOF
            then
              let (eofCase, eofConts) = eval_static opts e2 Nothing conts
-             in -- We need to generate a term in object level which means
+             in -- We need to generate a term in object level which will mean
                 -- "read a character, evaluate this if it's EOF, evaluate that
                 -- otherwise"
                 --
+                -- Doing this in object language level is not easy, because it
+                -- doesn't have booleans, conditionals etc. So we build a term
+                -- that emulates all this and means same thing. (see `eofCond`
+                -- for the definition)
+                --
+                -- The obvious problem is that this term is big, and requires
+                -- a lot of reductions. Instead of checking a condition in
+                -- interpreter, we know created a term that emulates same
+                -- conditional in object language level, which means a lot of
+                -- reductions from the interpreter side.
+                --
+                -- If we didn't do a lot of reductions in the EOF case, then we
+                -- probably just de-optimized the program. A single step to decide
+                -- which branch to take is now compiled to a 20+ steps.
+                -- (our new term includes more than 20 backticks)
+                --
+                -- Another issue is that we need to evaluate EOF case with
+                -- different continuations. So this would be wrong:
+                --
                 -- (eofCond eofCase e2, conts)
                 --
-                -- But this would be incorrect, because specialized case will have
-                -- different continuations. So we should replace it with a
-                -- continuation call:
+                -- Because specialized case will have different continuations.
+                -- So we should replace it with a continuation call:
+                --
                 (eofCond (Backtick_S (Cont_S eofConts) eofCase) e2, conts)
+                -- I think Print_S and Read_S cases demonstrate one of the
+                -- limitations of specializing interpreters using partial
+                -- evaluators.
            else (Backtick_S Read_S e2, conts)
       Cmp_S c' => apply_static opts e2 (if Just c' == c then I_S else V_S) c conts
       Repr_S   => apply_static opts e2 (case c of Nothing => V_S; Just c' => Print_S c') c conts
