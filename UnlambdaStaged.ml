@@ -44,7 +44,7 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
         .< UnlambdaCont.eval (Backtick_S
                                (Backtick_S ( .~ (lift_exp_s x), .~ (lift_exp_s e2)),
                                 Backtick_S ( .~ (lift_exp_s y), .~ (lift_exp_s e2))))
-                             cc .~ (lift_conts cont) >.
+                             .~ (lift_cc cc) .~ (lift_conts cont) >.
   | I_S -> apply_cont e2 cc cont
   | V_S -> apply_cont V_S cc cont
   | C_S -> apply e2 (Cont_S cont) cc cont
@@ -52,7 +52,7 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
       if opts.eval_cc then
         apply_cont e2 cc cont'
       else
-        .< UnlambdaCont.apply_cont .~ (lift_exp_s e2) cc .~ (lift_conts cont') >.
+        .< UnlambdaCont.apply_cont .~ (lift_exp_s e2) .~ (lift_cc cc) .~ (lift_conts cont') >.
   | D_S -> apply_cont e2 cc cont
   | D1_S f -> eval f cc (ApplyDelayed e2 :: cont)
   | Print_S c -> .< let _ = print_char c in .~ (apply_cont e2 cc cont) >.

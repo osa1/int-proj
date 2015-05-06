@@ -47,3 +47,8 @@ and lift_cont (cont : cont) : cont code =
   | DelayGuard e -> .< DelayGuard .~ (lift_exp_s e) >.
   | ApplyTo e -> .< ApplyTo .~ (lift_exp_s e) >.
   | ApplyDelayed e -> .< ApplyDelayed .~ (lift_exp_s e) >.
+
+let lift_cc (cc : char option) : (char option) code =
+  match cc with
+  | None -> .< None >.
+  | Some c -> .< Some c >.
