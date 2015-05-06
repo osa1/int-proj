@@ -14,7 +14,7 @@ and print c x cont = print_char c; cont x
 and e x _ cont = x
 and read x cont =
       let _ = (current_char := try Some (input_char stdin)
-                          with _ -> None) in
+                               with _ -> None) in
       x (match !current_char with
          | None -> v
          | Some _ -> i) cont

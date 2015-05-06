@@ -65,7 +65,7 @@ let _ =
 
       ( "-compile",
         Arg.Unit (function () -> opts.compile <- true),
-        "Compile and run compiled program.");
+        "Compile and run compiled program." );
 
       ( "-run",
         Arg.Unit (function () -> opts.run <- true),
