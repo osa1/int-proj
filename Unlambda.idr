@@ -379,6 +379,83 @@ main = do
     _ <- eval (parseStr hello) Nothing (\e, _ => return e)
     putStrLn "Done"
 
+------------------------------------------------
+-- Double the automation, double the confusion..
+-- Some experiments with Idris partial evalutor. It's very hard to see if
+-- partial evaluation is working as expected, since there's no easy way to see
+-- generated code.
+
+-- This is partially evaluated just fine...
+my_pow_sd : [static] Nat -> Nat -> Nat
+my_pow_sd x Z     = 1
+my_pow_sd x (S k) = mult x (my_pow_sd x k)
+
+-- But this one is not evaluated partially evaluated no matter what. See f' below.
+my_pow_ss : [static] Nat -> [static] Nat -> Nat
+my_pow_ss x Z     = 1
+my_pow_ss x (S k) = mult x (my_pow_ss x k)
+
+-- This is also not partially evaluated at all. See f'' below.
+my_pow_ds : Nat -> [static] Nat -> Nat
+my_pow_ds x Z     = 1
+my_pow_ds x (S k) = mult x (my_pow_ds x k)
+
+--
+-- NOTE: need eta-expansion for partial evaluation here:
+-- Doesn't work: f   = my_pow_sd 10
+-- Works:        f x = my_pow_sd 10 x
+--
+
+-- *Unlambda> :printdef f
+-- f : Nat -> Nat
+-- f x = PE_my_pow_28a53c2b (fromInteger 20)
+-- *Unlambda> :printdef PE_my_pow_28a53c2b
+-- PE_my_pow_28a53c2b : Nat -> Nat
+-- PE_my_pow_28a53c2b 0 = fromInteger 1
+-- PE_my_pow_28a53c2b (S k) = mult (fromInteger 10)
+--                                 (PE_my_pow_28a53c2b k)
+--
+-- See how second argument is kept dynamic, even though in the use site it's
+-- statically known.
+--
+f : Nat -> Nat
+f x = my_pow_sd 10 20
+
+
+-- *Unlambda> :printdef f_ss
+-- f_ss : Nat -> Nat
+-- f_ss x = PE_my_pow_sd_28a53c2b x
+--
+f_ss : Nat -> Nat
+f_ss x = my_pow_sd 10 x
+
+-- *Unlambda> :printdef f_eta
+-- f_eta : Nat -> Nat
+-- f_eta = my_pow_sd (fromInteger 10)
+--
+-- Not partially evaluated...
+--
+f_eta : Nat -> Nat
+f_eta = my_pow_sd 10
+
+-- *Unlambda> :printdef f'
+-- f' : Nat -> Nat
+-- f' x = my_pow_ss (fromInteger 10) (fromInteger 20)
+--
+-- Seems like a bug.
+--
+f' : Nat -> Nat
+f' x = my_pow_ss 10 20
+
+-- *Unlambda> :printdef f''
+-- f'' : Nat -> Nat
+-- f'' x = my_pow_ds (fromInteger 10) (fromInteger 20)
+--
+-- Not partially evaluted...
+--
+f'' : Nat -> Nat
+f'' x = my_pow_ds 10 20
+
 -------------------------------
 -- Partially evaluated programs
 
