@@ -3,6 +3,20 @@
 
 ## Introduction
 
+---
+
+TODO: Add these to somewhere
+
+In most basic sense, specialization is easily possible by just parsing in
+specialization time. But that doesn't specialize too much, ideally we'd like to
+eliminate all interpretation costs, which is only possible if we could compile
+everything to our meta language. On the other hand, we want to base our
+specializer on our interpreters. It's tricky to do all these together. What we
+do instead is to specialize as much as possible and fall back to interpreter
+when we stop.
+
+---
+
 The idea of specializing interpreters on programs is known for a long time.
 It's known to be described for the first time by Futamura in his seminal 1971
 paper, [Partial Evaluation of Computation Process -- An approach to a
@@ -10,66 +24,185 @@ Compiler-Compiler](https://cs.au.dk/~hosc/local/HOSC-12-4-pp381-391.pdf), but
 also realized by Turchin(inventor of supercompilation) independently[^1].
 
 In this short experiment we explore two approaches of specializing interpreters
-on programs. We perform interpreter specialization using two different
-methods: Partial evaluation and multi-stage programming. Our object language
-is [Unlambda](http://www.madore.org/~david/programs/unlambda/): A variant of SKI
-combinator calculus that has some extensions like "read character", "write
-character", "compare read character with X" and "call/cc" functions.
+on programs. We perform interpreter specialization using two different methods:
+Partial evaluation and multi-stage programming. Our object language is
+[Unlambda](http://www.madore.org/~david/programs/unlambda/): A variant of SKI
+combinator calculus that has some extensions like "read a character", "write a
+character", "compare read character with X" and call/cc functions.
 
-For the meta language with partial evaluator, we use
-[Idris](http://www.idris-lang.org/), which is the only relatively mature
-language with a partial evaluator that we could find[^2]. For the language with
-multi-staging constructs, we use
+For the meta language with partial evaluator, I'm going to use
+[Idris](http://www.idris-lang.org/)[^2]. For the language with multi-staging
+constructs, I'm going to use
 [MetaOCaml](http://okmij.org/ftp/ML/MetaOCaml.html).
 
 These two methods, partial evaluation and multi-stage programming, represent two
 ends of the program specialization tools spectrum: Partial evaluation is
-completely automated, it's not possible to give hints or guide a partial
+completely automated, it's not possible to give hints to or guide a partial
 evaluator[^3]. In the other end of the spectrum is multi-stage programming,
 which is completely manual. A programmer must annotate program terms with
 constructs like MetaOCaml's "bracket", "escape"(or "splice"), and "run" to be
 able to generate code and run it[^4].
 
-A partial evaluator for language L is a compiler that takes an L program, a
-subset of it's inputs, and generates another L program that is optimized for the
-given input(e.g. specialized). Generated L program now doesn't take that input
-in runtime.
+Simplest form of interpreter specialization is parsing the object program and
+generating meta language representations in specialization time. More advanced
+specializations involve evaluating open terms, evaluating branches of
+conditionals with dynamic conditions etc. similar to what's done in
+supercompilation. Main issue is to not specialize too much or too aggressively.
+We don't want our specializer to loop forever when we try to specialize a
+looping program. In case of evaluating open terms we can have looping
+specializer even if the program is guaranteed to terminate in runtime.
 
-A multi-stage language L is a language that provides constructs for generating L
-code. Note that code generation in multi-stage language happens in runtime. To
-support this a multi-stage language should provide a way to generated code. One
-advantage of this is that it supports writing code generators that when run,
-generates another code(which may be a code-generating-code again), but for our
-purposes this is not very important.
+So we have to be conservative. Instead of finding and implementing an heuristic
+that terminates for all programs, in current implementation we provide some
+tuning parameters to the users to specify how much to specialize. One can start
+with a very powerful specialization parameters, and disable some specializations
+if his/her program causes specializer to loop.
 
-Implementing interpreter specializers involves lots of tricky to solve problems,
-and some of those problems are undecidable. For example, we can't know in
-general if the program we're specializing our interpreter on terminates on all
-inputs. In this experiment we compare tools for these properties:
+We compare implementations for these see:
 
-* Once we had an interpreter, how hard was it to convert it to a specializers?
-  Note that by itself this question doesn't mean anything: It's very hard to
-  write specializers that do exactly the same thing in both languages.
+* Once we had an interpreter, how hard was it to convert it to a specializer?
+  Note that by itself this question doesn't mean a lot: It may be equally simple
+  to get some kind of specializer from an interpreter in both languages with
+  very minimal changes, but those specializers will probably do very different
+  specializations and will have different properties. Answer to this question
+  may still give some ideas.
 
 * Termination checking is undecidable, which means we can't know if our
-  specializers will loop forever and we should implement conservative
+  specializers will loop forever in general and we should implement conservative
   specializers. Were we able to implement specializers with different powers?
   For example, we should be able to write specializers that
 
-  1. Specializes everything, but loops is input program loops.
+  1. Specializes very aggressively, but loops if input program loops.
   2. Specializes a lot, doesn't loop if program loops depending on a dynamic
-     input. (e.g. we don't specialize cases of conditionals if the condition is
-     dynamic, that is, not known in specialization time)
+     input. (e.g. we don't specialize branches of conditionals if the condition
+     is dynamic, that is, not known in specialization time)
   3. Fairly conservative, but specializes some specified cases. (will be
      described later)
   4. Only parses the program in specialization time. This is most basic form of
-     compilation.
+     compilation. Always terminates.
 
+Couple of notes before describing the implementation and results: What's meant
+by "specialization" is sometimes becoming confusing. Let's define it as
+eliminating interpretation costs. A more powerful specializer means eliminating
+more interpretation costs. Most of the time it's possible to specialize and
+optimize at the same time. In this project we explore this: We try to have an
+optimizing specializer.
 
-* Are there any gradualness involved? Can I start removing annotations in both
-  implementations and assume that my programs will work at any point? Or when I
-  start with non-annotated programs, can I gradually add annotations and have
-  something that runs at all stages?
+Note that using a multi-stage programming it's sometimes possible to compile
+object language programs to meta language programs, eliminating all the
+interpretation costs. This is done in `UnlambdaCompiler.ml` (OCaml functions
+corresponding to Unlambda builtins are defined in `UnlambdaFuns.ml`). This is
+most powerful specialization possible.
+
+Once you start modifying interpreters for specialization it's not clear when to
+stop to still have "specialized interpreter" and not a "compiler evaluated by
+partial evaluator". If you change it too much, you end up implementing a
+compiler that you can use in runtime, as we did in `UnlambdaCompiler.ml`. (you
+can try it using `-compile` parameter) In a multi-stage language, both versions
+similarly easy to use. In a partial evaluator however, the story is little
+different, because you can't run this "compiler" in runtime, so you need some
+kind of interpreter at hand at all times.
+
+## Caveats
+
+At the time I did this writing, Idris was pretty unstable, and some of the bugs
+actually effected the partial evaluator(see
+[#2234](https://github.com/idris-lang/Idris-dev/issues/2234) as an example).
+Also, printing partially evaluated programs in Idris is not easy. It doesn't
+have any functions for that, so we need to load modules in REPL and inspect them
+using `:printdef`. `outputs` directory in source repository keeps all the
+outputs mentioned in the text.(I simplified them a lot and added some comments
+to make them easier to read)
+
+## Implementation
+
+We start by implementing interpreters in both languages. OCaml implementations
+is given in `UnlambdaInterp.ml`, Idris implementation is `eval` in
+`Unlambda.idr`.
+
+This is important for two reasons: 1) We make sure we get the semantics right
+2) Because of the reasons described above, we need to be conservative in
+specializers. When we stop specializing, we need to call interpreter to continue
+evaluation. This is implementing using interpreters, e.g. we fall back to
+interpretation.
+
+To make implementation of call/cc easier, we implement interpreters in
+continuation passing style, and save/restore interpreter continuations(which are
+represented as functions) when we see call/cc or continuation application.
+
+Our interpreters have one state that persists even across continuation calls:
+current character. `@` function in Unlambda is used to read a character. That
+character should then be saved. `|` function is used to compare "current
+character" with a given character, and branch accordingly. Thus we have an extra
+argument for "current character" in our interpreters and specializers.
+
+In the specializers we won't be only manipulating terms, we'll also be
+manipulating continuations. And when we want to fall back to the interpreter,
+we'll need to pass a continuation to it. This means we need to convert
+continuations of manipulated in specializers to continuations for interpreters.
+
+This is tricky to do if we represent continuations as functions in our meta
+level operations. As a solution, we implement same interpreters using ADT
+implementation of continuations.
+
+---
+
+```idris
+data Continuation
+  = DelayGuard ExpS
+  | ApplyTo ExpS
+  | ApplyDelayed ExpS
+```
+
+TODO: Explain
+
+---
+
+Now we can pass continuations from specializers to interpreters without any
+issues. They'll be interpreted differently by those functions. MetaOCaml
+implementation is in `UnlambdaCont.ml` and Idris implementation is `eval_cont`
+in `Unlambda.idr`.
+
+## Compilation with MetaOCaml
+
+Implementation of staged interpreter is given in `UnlambdaStaged.ml`. It's based
+on `UnlambdaCont.ml` interpreter. Only differences are:
+
+* We add brackets(`.< ... >.`) and escapes(`.~`) for staging.
+* We add checks for optimizations parameters.
+
+As an example, here's the code that evaluates an `S` application in our
+interpreter:
+
+```ocaml
+  match e1 with
+  ...
+  | S2_S (x, y) ->
+      eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
+  ...
+```
+
+And here's staged version:
+
+```ocaml
+  match e1 with
+  ...
+  | S2_S (x, y) ->
+      if opts.eval_S then
+        eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
+      else
+        .< UnlambdaCont.eval (Backtick_S
+                               (Backtick_S ( .~ (lift_exp_s x), .~ (lift_exp_s e2)),
+                                Backtick_S ( .~ (lift_exp_s y), .~ (lift_exp_s e2))))
+                             cc .~ (lift_conts cont) >.
+  ...
+```
+
+If `-eval-S` is given, then we continue specializing the term using staged
+interpreter. Otherwise we generate a code that falls back to interpreter. This
+case is exactly the same with our interpreter's handler for `S`, except we add
+brackets and `lift` calls to be able to lift current terms to code values of
+next stage.
 
 ---
 
@@ -91,4 +224,5 @@ Thiemann](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.48.5519&rep=r
 modular staging", described in [Lightweight Modular Staging, A Pragmatic
 Approach to Runtime Code Generation and Compiled DSLs, Rompf and
 Odersky](http://infoscience.epfl.ch/record/150347/files/gpce63-rompf.pdf), which
-allows staging by changing only type annotations.
+allows staging by changing type annotations. TODO: Improve this part. IIRC, LMS
+also needs some kind of overloading to be able to represent some terms as code.
