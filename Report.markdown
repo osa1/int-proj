@@ -344,7 +344,41 @@ of Idris AST instead of programs written in concrete Idris syntax.
 
 # Discussions and results
 
--- PE. is too complicated to completely automate.
+MetaOCaml implementation was almost trivial. After initial interpreter I
+followed these steps:
+
+* I implemented a multi-stage version by only adding some bracket/escapes to
+  original interpreter.
+* It worked fine, but interpreter was looping most of the time. I decided to
+  stop staged interpreter and generate code that calls normal interpreter in
+  some places to avoid looping.
+* This wasn't possible because two interpreters were using different
+  representations of continuations. Defined an alternative representation of
+  continuations to be able to evaluate them in both interpreters.
+* Added couple of conditions to tune optimizations.
+
+Staging constructs leave no room for confusion -- it's trivial to see when we're
+falling back to interpreter, when we're specializing sub-terms and combining
+results etc.
+
+In the partial evaluation side, I had two major problems. First one is related
+with the idea itself. Partial evaluation is completely automated. It's not easy
+to see what will the generated code be, or when a partial evaluator loops.
+
+For example, `peHello` loops, even though I'd expect it to just parse in
+compilation time and doesn't do any further processing.
+
+To make sure partial evaluation is doing the work I'm expecting it to do, I need
+to print the code and make sure.
+
+It seems like partial evaluation is too complicated to completely automate.
+
+Second problem is that even though staged interpreters(as described in [^3])
+help with getting optimizations done in partial evaluation, I think it's still
+more limited than multi-stage programming approach, as already demonstrated in
+the case of optimized branches. Even if it's possible to optimize this case like
+in MetaOCaml implementation, it's not clear how to do so, whereas in MetaOCaml
+it was trivial.
 
 ---
 
