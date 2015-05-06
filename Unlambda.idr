@@ -72,7 +72,7 @@ eqExp _ _ = False
 -- Parsing
 
 partial
-parseStr : String -> Exp
+parseStr : [static] String -> Exp
 parseStr str = fst $ iter 0
   where
     comment : Int -> Int
@@ -465,6 +465,9 @@ f'' x = my_pow_ds 10 20
 -------------------------------
 -- Partially evaluated programs
 
+-- I think this is also a bug: This program is evaluated by the partial
+-- evalutor, even though `eval` doesn't have `[static]` annotation.
+--
 peHello : IO Exp
 peHello = eval (parseStr hello) Nothing (\e, _ => return e)
 
@@ -473,6 +476,7 @@ peHello1 =
     let (exp, conts) = eval_static (PE True True True) (tr $ parseStr hello) Nothing []
     in eval1 exp Nothing conts
 
+-- Same bug happens here.
 peLoop : IO Exp
 peLoop = eval (parseStr loopingPgm) Nothing (\e, _ => return e)
 
