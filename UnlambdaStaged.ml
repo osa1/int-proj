@@ -65,11 +65,11 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
             .~ (if opts.eval_eof then
                   apply e2 V_S None cont
                 else
-                  .< UnlambdaCont.apply e2 V_S None .~ (lift_conts cont) >.)
+                  .< UnlambdaCont.apply .~ (lift_exp_s e2) V_S None .~ (lift_conts cont) >.)
          | Some _ ->
              (* TODO: Briefly talk about why we can't use concrete character
               * here in staged computation to specialize further *)
-             UnlambdaCont.apply e2 I_S c .~ (lift_conts cont)
+             UnlambdaCont.apply .~ (lift_exp_s e2) I_S c .~ (lift_conts cont)
        >.
   | Cmp_S c -> apply e2 (if Some c = cc then I_S else V_S) cc cont
   | Repr_S -> apply e2 (match cc with None -> V_S | Some c -> Print_S c) cc cont
