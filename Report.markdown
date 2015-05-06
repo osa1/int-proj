@@ -280,7 +280,71 @@ done.
 
 ## Compilation with Idris (partial evaluation)
 
+Specializing Idris implementation of the interpreter is just a matter of adding
+some `[static]` annotations in interpreter functions. But it has the obvious
+problem: It loops in compile time for most programs.
 
+One might think that implementing a simple compilation like MetaOCaml
+implementation's `-parse-only` is easily possible by just adding `[static]` to
+parsing functions and not adding it to evaluator. However, for some reason,
+doing that doesn't prevent Idris from partially evaluating the interpreter. For
+example, in `Unlambda.idr`, `peHello` is compiled to a sequence of `putchar`
+calls by the partial evaluator, even though we don't have `[static]` in
+`eval` function. Similarly, `peLoop` loops. I assume that this should have
+worked and it's a bug in Idris.
+
+Tuning the specializer is a lot tricky when compared with MetaOCaml
+implementation, in which case we just had to add a couple of conditionals and
+brackets. We need to add some optimization functions that does the optimizations
+we want. These functions should have type `Exp -> (Exp, [Continuation])` and
+they have to be terminating on all inputs. We then need to make sure those
+functions are applied completely in compile time by the partial evaluator. This
+is the approach used by Sperber and Thiemann in '96 paper(see [^3]).
+
+For this purpose we implement `eval_static`, which unlike the name doesn't
+actually evaluate, it's an optimizer. It does the transformations depending on
+the optimization parameters.
+
+This approach of applying optimizers statically using partial evaluation may
+look OK at first sight, but it's actually a lot less flexible. As an example,
+see implementation of `-eval-eof` optimization in `apply_static` in
+`Unlambda.idr`. We can evaluate the branch statically, but incorporating the
+result with existing code is tricky. We need to generate a term of object
+language that reads a character, takes the optimized branch if it's failed, and
+takes the other branch otherwise. Thankfully, in this case this is possible,
+because we can generate an object language term that does exactly that. The
+problem is, evaluating that term takes more than 20 steps. If we didn't do a lot
+of optimizations in EOF branch, then we may end up de-optimizing the program by
+replacing a small term with a big one that takes a lot more to reduce. (see also
+comments in Idris file)
+
+What we did in MetaOCaml is that we generated OCaml code that does this. It was
+this code:
+
+```ocaml
+let _ = Pervasives.print_char 'F' in
+let _ = Pervasives.print_char '\n' in Syntax.I_S
+```
+
+But in partial evaluation our optimizers have to return object language terms.
+We're not generating Idris code that represents runs optimized procedures and
+returns same value that our object language term returns, like we did in
+MetaOCaml.
+
+It should be possible to do exactly the same thing using partial evaluation, but
+it's not clear to me how to do this. In the worst case we can cheat and add a
+new term to the object language that does whatever we want, and then generate
+that syntax in optimizers.
+
+Idris implementation has optimized and non-optimized versions of programs we
+described in MetaOCaml section. However, it optimizes less because of the
+limitation mentioned above, and generated code is very hard to read and
+understand, because unlike MetaOCaml, Idris is printing internal representation
+of Idris AST instead of programs written in concrete Idris syntax.
+
+# Discussions and results
+
+-- PE. is too complicated to completely automate.
 
 ---
 
