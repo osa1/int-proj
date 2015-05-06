@@ -1,0 +1,86 @@
+Output of ./unlambda_metaocaml programs/trivial.unl -staged -parse-only
+
+.<
+UnlambdaCont.eval
+  (Syntax.Backtick_S
+     ((Syntax.Backtick_S
+         ((Syntax.Backtick_S (Syntax.S_S, Syntax.I_S)), Syntax.I_S)),
+       (Syntax.Backtick_S
+          ((Syntax.Backtick_S (Syntax.S_S, Syntax.I_S)),
+            (Syntax.Backtick_S
+               ((Syntax.Backtick_S
+                   (Syntax.S_S,
+                     (Syntax.Backtick_S
+                        (Syntax.K_S,
+                          (Syntax.Backtick_S
+                             (Syntax.D_S,
+                               (Syntax.Backtick_S
+                                  ((Syntax.Print_S '\n'),
+                                    (Syntax.Backtick_S
+                                       ((Syntax.Print_S '!'),
+                                         (Syntax.Backtick_S
+                                            ((Syntax.Print_S 'l'),
+                                              (Syntax.Backtick_S
+                                                 ((Syntax.Print_S 'a'),
+                                                   (Syntax.Backtick_S
+                                                      ((Syntax.Print_S 'i'),
+                                                        (Syntax.Backtick_S
+                                                           ((Syntax.Print_S
+                                                               'v'),
+                                                             (Syntax.Backtick_S
+                                                                ((Syntax.Print_S
+                                                                    'i'),
+                                                                  (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'r'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    't'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    ' '),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    't'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    's'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'e'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    '\''),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'c'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    ' '),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    ','),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'a'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'd'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'b'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'm'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'a'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'l'),
+                                                                    (Syntax.Backtick_S
+                                                                    ((Syntax.Print_S
+                                                                    'n'),
+                                                                    (Syntax.Print_S
+                                                                    'U'))))))))))))))))))))))))))))))))))))))))))))))))))))))),
+                 Syntax.I_S)))))) None []>.

@@ -163,7 +163,7 @@ issues. They'll be interpreted differently by those functions. MetaOCaml
 implementation is in `UnlambdaCont.ml` and Idris implementation is `eval_cont`
 in `Unlambda.idr`.
 
-## Compilation with MetaOCaml
+## Compilation with MetaOCaml (multi-stage programming)
 
 Implementation of staged interpreter is given in `UnlambdaStaged.ml`. It's based
 on `UnlambdaCont.ml` interpreter. Only differences are:
@@ -204,6 +204,84 @@ case is exactly the same with our interpreter's handler for `S`, except we add
 brackets and `lift` calls to be able to lift current terms to code values of
 next stage.
 
+We implement other specializations similarly. If we remove the tuning
+parameters, our staged interpreter exactly the same with non-staged version in
+most cases, we just wrap things with brackets, escapes and lifts[^5].
+
+Some example executions:
+
+* `Hello.unl` is a "hello world" program that prints "Hello world" a couple of
+  times. If we run staged interpreter with `-staged -eval-S`, and print generated code, our MetaOCaml
+  implementations generates this code:
+  ```ocaml
+  let _ = Pervasives.print_char 'H' in
+  let _ = Pervasives.print_char 'e' in
+  let _ = Pervasives.print_char 'l' in
+  let _ = Pervasives.print_char 'l' in
+  let _ = Pervasives.print_char 'o' in
+  let _ = Pervasives.print_char ' ' in
+  let _ = Pervasives.print_char 'w' in
+  let _ = Pervasives.print_char 'o' in
+  let _ = Pervasives.print_char 'r' in
+  let _ = Pervasives.print_char 'l' in
+  let _ = Pervasives.print_char 'd' in
+  let _ = Pervasives.print_char '!' in
+  let _ = Pervasives.print_char '\n' in
+  ... repeats a couple of times ...
+  Syntax.I_S>.
+  ```
+  With this specialization parameters, what we had in effect is that we compiled
+  the Unlambda program to OCaml, we eliminated all the interpretation costs
+  without actually writing a compiler. Another interesting thing is that we
+  unrolled the loop, which we do all the time with `-eval-S`. (this is why it
+  leads to loops in most programs)
+* `Trivial.unl` is a program that prints "Unlambda, c'est trivial!" forever. If
+  we run it using `-staged -eval-S`, it loops because the program is looping
+  using `S` function. If we use `-staged -eval-cc`, it generates the code listed
+  in `outputs/trivial_metaocaml`. This code is not very different than
+  `-parse-only` generated code, because without `-eval-S`, we just fall back to
+  interpreter without trying to specialize arguments of `S`. I think this
+  improvement can be implemented without too much trouble, but current version
+  doesn't do this.
+* `eof-test.unl` is a program that tries to read a character. It prints 'T' when
+  it succeeds and 'F' otherwise(e.g. EOF happens). With `-staged -eval-S` it
+  specializes the code a lot, but leaves the code with a conditional with
+  non-specialized branches. We can use `-eval-eof` parameter to specialize one
+  branch of the conditional with the assumption that condition is true. Here's
+  the generated code without `-eval-eof`:
+  ```ocaml
+  UnlambdaCont.apply Syntax.I_S Syntax.V_S None
+    [Syntax.ApplyTo
+       (Syntax.S2_S
+          ((Syntax.K1_S Syntax.C_S),
+            (Syntax.S2_S
+               ((Syntax.K1_S
+                   (Syntax.S1_S (Syntax.K1_S (Syntax.K1_S Syntax.K_S)))),
+                 (Syntax.S2_S
+                    (Syntax.S_S,
+                      (Syntax.K1_S (Syntax.K1_S (Syntax.K1_S Syntax.I_S)))))))));
+    Syntax.DelayGuard (Syntax.Print_S 'F');
+    Syntax.DelayGuard (Syntax.Print_S 'T');
+    Syntax.DelayGuard Syntax.I_S;
+    Syntax.ApplyTo (Syntax.Print_S '\n')]
+  ```
+  It falls back to the interpreter. Here's the code generated with `-eval-eof`:
+  ```
+  let _ = Pervasives.print_char 'F' in
+  let _ = Pervasives.print_char '\n' in Syntax.I_S
+  ```
+  It evaluated the term in specialization time and generated OCaml code that
+  prints 'F' and returns the value of the term.
+
+To print generated code and run it `-run` argument can be used. `-parse-only`
+only parses the code in code-generation time. Generated program is an
+interpreter and it's specialized for the given program, but no optimizations are
+done.
+
+## Compilation with Idris (partial evaluation)
+
+
+
 ---
 
 [^1]: Mentioned in [Intorduction to Supercompilation, Sørensen and
@@ -226,3 +304,11 @@ Approach to Runtime Code Generation and Compiled DSLs, Rompf and
 Odersky](http://infoscience.epfl.ch/record/150347/files/gpce63-rompf.pdf), which
 allows staging by changing type annotations. TODO: Improve this part. IIRC, LMS
 also needs some kind of overloading to be able to represent some terms as code.
+
+[^5]: One thing to note here is that explicit lifting should not be necessary,
+and it's adding a lot of noise to the code. But in practice MetaOCaml is failing
+to print lifted(CSP) values. The whole story is long and a bit complicated, so
+let me just refer interested readers to the related Caml-list discussion:
+[Starts here](https://sympa.inria.fr/sympa/arc/caml-list/2015-04/msg00151.html),
+[and continues
+here](https://sympa.inria.fr/sympa/arc/caml-list/2015-05/msg00031.html).

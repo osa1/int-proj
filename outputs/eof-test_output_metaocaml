@@ -1,0 +1,60 @@
+$ ./unlambda_metaocaml eof-test.unl -staged -eval-S
+
+.<
+let c_1 = try Some (Pervasives.input_char Pervasives.stdin) with | _ -> None in
+match c_1 with
+| None  ->
+    UnlambdaCont.apply Syntax.I_S Syntax.V_S None
+      [Syntax.ApplyTo
+         (Syntax.S2_S
+            ((Syntax.K1_S Syntax.C_S),
+              (Syntax.S2_S
+                 ((Syntax.K1_S
+                     (Syntax.S1_S (Syntax.K1_S (Syntax.K1_S Syntax.K_S)))),
+                   (Syntax.S2_S
+                      (Syntax.S_S,
+                        (Syntax.K1_S (Syntax.K1_S (Syntax.K1_S Syntax.I_S)))))))));
+      Syntax.DelayGuard (Syntax.Print_S 'F');
+      Syntax.DelayGuard (Syntax.Print_S 'T');
+      Syntax.DelayGuard Syntax.I_S;
+      Syntax.ApplyTo (Syntax.Print_S '\n')]
+| Some _ ->
+    UnlambdaCont.apply Syntax.I_S Syntax.I_S c_1
+      [Syntax.ApplyTo
+         (Syntax.S2_S
+            ((Syntax.K1_S Syntax.C_S),
+              (Syntax.S2_S
+                 ((Syntax.K1_S
+                     (Syntax.S1_S (Syntax.K1_S (Syntax.K1_S Syntax.K_S)))),
+                   (Syntax.S2_S
+                      (Syntax.S_S,
+                        (Syntax.K1_S (Syntax.K1_S (Syntax.K1_S Syntax.I_S)))))))));
+      Syntax.DelayGuard (Syntax.Print_S 'F');
+      Syntax.DelayGuard (Syntax.Print_S 'T');
+      Syntax.DelayGuard Syntax.I_S;
+      Syntax.ApplyTo (Syntax.Print_S '\n')]>.
+
+
+$ ./unlambda_metaocaml eof-test.unl -staged -eval-S -eval-eof
+
+.<
+let c_1 = try Some (Pervasives.input_char Pervasives.stdin) with | _ -> None in
+match c_1 with
+| None  ->
+    let _ = Pervasives.print_char 'F' in
+    let _ = Pervasives.print_char '\n' in Syntax.I_S
+| Some _ ->
+    UnlambdaCont.apply Syntax.I_S Syntax.I_S c_1
+      [Syntax.ApplyTo
+         (Syntax.S2_S
+            ((Syntax.K1_S Syntax.C_S),
+              (Syntax.S2_S
+                 ((Syntax.K1_S
+                     (Syntax.S1_S (Syntax.K1_S (Syntax.K1_S Syntax.K_S)))),
+                   (Syntax.S2_S
+                      (Syntax.S_S,
+                        (Syntax.K1_S (Syntax.K1_S (Syntax.K1_S Syntax.I_S)))))))));
+      Syntax.DelayGuard (Syntax.Print_S 'F');
+      Syntax.DelayGuard (Syntax.Print_S 'T');
+      Syntax.DelayGuard Syntax.I_S;
+      Syntax.ApplyTo (Syntax.Print_S '\n')]>.
