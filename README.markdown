@@ -1,6 +1,6 @@
-# Building
+# Building and running
 
-Make sure Idris and MetaOCaml is in the path, and run `make`.
+Make sure Idris and MetaOCaml are in the $PATH, and run `make`.
 
 ```
 ➜  unlambda git:(master) ✗ make
@@ -53,7 +53,7 @@ MetaOCaml implementation comes with command line arguments for tunning the speci
 Some example executions:
 
 * `$ ./unlambda_metaocaml programs/Hello.unl -staged -eval-S`
-* `$ ./unlambda_metaocaml programs/trivial.unl -staged` loop when `-eval-S` is added.
+* `$ ./unlambda_metaocaml programs/trivial.unl -staged` loops when `-eval-S` is added.
 * `$ ./unlambda_metaocaml eof-test.unl -staged -eval-S -eval-eof`
 * Add `-run` to the mix to run generated code.
 * Use `-parse-only` to run minimal amount of specialization. (only does parsing

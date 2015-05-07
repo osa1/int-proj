@@ -9,7 +9,7 @@ paper, [Partial Evaluation of Computation Process -- An approach to a
 Compiler-Compiler](https://cs.au.dk/~hosc/local/HOSC-12-4-pp381-391.pdf), but
 also realized by Turchin(inventor of supercompilation) independently[^1].
 
-In this short experiment I'm going to explore two approaches of specializing
+In this short project I'm going to try two approaches of specializing
 interpreters on programs. I'm going to perform interpreter specialization using
 two different methods: Partial evaluation and multi-stage programming. The
 object language is [Unlambda](http://www.madore.org/~david/programs/unlambda/):
