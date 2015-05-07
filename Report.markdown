@@ -3,20 +3,6 @@
 
 ## Introduction
 
----
-
-TODO: Add these to somewhere
-
-In most basic sense, specialization is easily possible by just parsing in
-specialization time. But that doesn't specialize too much, ideally we'd like to
-eliminate all interpretation costs, which is only possible if we could compile
-everything to our meta language. On the other hand, we want to base our
-specializer on our interpreters. It's tricky to do all these together. What we
-do instead is to specialize as much as possible and fall back to interpreter
-when we stop.
-
----
-
 The idea of specializing interpreters on programs is known for a long time.
 It's known to be described for the first time by Futamura in his seminal 1971
 paper, [Partial Evaluation of Computation Process -- An approach to a
@@ -150,6 +136,16 @@ implementation of continuations.
 
 ---
 
+Aside: I remember having this problem before. Implementing call/cc with a CPS
+interpreter is easy enough, but sometimes you need something lower level, maybe
+you're writing a VM or compiling to C and sometimes it's not easy to see how
+many different continuations you need and how to compile/interpret them. In this
+project I came up with this solution: I already had CPS interpreter. I looked at
+the code, and looked at where did I create new continuations. There were 3
+places where I created a new continuation, and no two of those were same
+continuations. Each continuation was capturing a value from the scope. So I
+ended up creating 3 continuation values like this:
+
 ```idris
 data Continuation
   = DelayGuard ExpS
@@ -157,7 +153,8 @@ data Continuation
   | ApplyDelayed ExpS
 ```
 
-TODO: Explain
+Then in the interpreter each one of those handled with a code that looks almost
+identical to the continuation functions in CPS interpreter.
 
 ---
 
@@ -218,7 +215,6 @@ Some example executions:
   implementations generates this code:
 
   ```ocaml
-  .<
   let _ = Pervasives.print_char 'H' in
   let _ = Pervasives.print_char 'e' in
   let _ = Pervasives.print_char 'l' in
@@ -234,7 +230,6 @@ Some example executions:
   let _ = Pervasives.print_char '\n' in
   ... repeats a couple of times ...
   Syntax.I_S
-  >.
   ```
 
   With this specialization parameters, what we had in effect is that we compiled
@@ -334,7 +329,6 @@ What we did in MetaOCaml is that we generated OCaml code that does this, instead
 of generating object level terms. Here is the generated code:
 
 ```ocaml
-.<
 let c_1 = try Some (Pervasives.input_char Pervasives.stdin) with | _ -> None in
 match c_1 with
 | None  ->
@@ -355,7 +349,6 @@ match c_1 with
       Syntax.DelayGuard (Syntax.Print_S 'T');
       Syntax.DelayGuard Syntax.I_S;
       Syntax.ApplyTo (Syntax.Print_S '\n')]
->.
 ```
 
 But in partial evaluation our optimizers have to return object language terms.
