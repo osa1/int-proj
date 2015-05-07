@@ -23,12 +23,13 @@ paper, [Partial Evaluation of Computation Process -- An approach to a
 Compiler-Compiler](https://cs.au.dk/~hosc/local/HOSC-12-4-pp381-391.pdf), but
 also realized by Turchin(inventor of supercompilation) independently[^1].
 
-In this short experiment we explore two approaches of specializing interpreters
-on programs. We perform interpreter specialization using two different methods:
-Partial evaluation and multi-stage programming. Our object language is
-[Unlambda](http://www.madore.org/~david/programs/unlambda/): A variant of SKI
-combinator calculus that has some extensions like "read a character", "write a
-character", "compare read character with X" and call/cc functions.
+In this short experiment I'm going to explore two approaches of specializing
+interpreters on programs. I'm going to perform interpreter specialization using
+two different methods: Partial evaluation and multi-stage programming. The
+object language is [Unlambda](http://www.madore.org/~david/programs/unlambda/):
+A variant of SKI combinator calculus that has some extensions like "read a
+character", "write a character", "compare read character with X" and call/cc
+functions.
 
 For the meta language with partial evaluator, I'm going to use
 [Idris](http://www.idris-lang.org/)[^2]. For the language with multi-staging
@@ -45,20 +46,20 @@ able to generate code and run it[^4].
 
 Simplest form of interpreter specialization is parsing the object program and
 generating meta language representations in specialization time. More advanced
-specializations involve evaluating open terms, evaluating branches of
-conditionals with dynamic conditions etc. similar to what's done in
+specializations involve doing reductions, evaluating open terms, evaluating
+branches of conditionals with dynamic conditions etc. similar to what's done in
 supercompilation. Main issue is to not specialize too much or too aggressively.
 We don't want our specializer to loop forever when we try to specialize a
 looping program. In case of evaluating open terms we can have looping
 specializer even if the program is guaranteed to terminate in runtime.
 
 So we have to be conservative. Instead of finding and implementing an heuristic
-that terminates for all programs, in current implementation we provide some
-tuning parameters to the users to specify how much to specialize. One can start
+that terminates for all programs, in current implementation we have some
+tuning parameters for the users to specify how much to specialize. One can start
 with a very powerful specialization parameters, and disable some specializations
 if his/her program causes specializer to loop.
 
-We compare implementations for these see:
+After having working specializers, I'll compare them for these:
 
 * Once we had an interpreter, how hard was it to convert it to a specializer?
   Note that by itself this question doesn't mean a lot: It may be equally simple
@@ -84,24 +85,26 @@ We compare implementations for these see:
 Couple of notes before describing the implementation and results: What's meant
 by "specialization" is sometimes becoming confusing. Let's define it as
 eliminating interpretation costs. A more powerful specializer means eliminating
-more interpretation costs. Most of the time it's possible to specialize and
-optimize at the same time. In this project we explore this: We try to have an
-optimizing specializer.
+more interpretation costs. Most of the time specialization itself is an
+optimization, but there are also optimizations that can be done in
+specialization time. In this project I try to have an optimizing specializer
+that does some transformations too.
 
 Note that using a multi-stage programming it's sometimes possible to compile
 object language programs to meta language programs, eliminating all the
-interpretation costs. This is done in `UnlambdaCompiler.ml` (OCaml functions
-corresponding to Unlambda builtins are defined in `UnlambdaFuns.ml`). This is
-most powerful specialization possible.
+interpretation costs. This is demonstrated in `UnlambdaCompiler.ml` (OCaml
+functions corresponding to Unlambda builtins are defined in `UnlambdaFuns.ml`).
+This is most powerful specialization possible, but since it's not an interpreter
+specialization, it's outside of the scope of this paper.
 
-Once you start modifying interpreters for specialization it's not clear when to
+Once one starts modifying interpreters for specialization it's not clear when to
 stop to still have "specialized interpreter" and not a "compiler evaluated by
 partial evaluator". If you change it too much, you end up implementing a
-compiler that you can use in runtime, as we did in `UnlambdaCompiler.ml`. (you
-can try it using `-compile` parameter) In a multi-stage language, both versions
-similarly easy to use. In a partial evaluator however, the story is little
-different, because you can't run this "compiler" in runtime, so you need some
-kind of interpreter at hand at all times.
+compiler, as I did in `UnlambdaCompiler.ml`. (you can try it using `-compile`
+parameter) In a multi-stage language, both versions similarly easy to use. In a
+partial evaluator however, the story is little different, because you can't run
+this "compiler" in runtime, so you need some kind of interpreter at hand at all
+times.
 
 ## Caveats
 
@@ -120,8 +123,8 @@ We start by implementing interpreters in both languages. OCaml implementations
 is given in `UnlambdaInterp.ml`, Idris implementation is `eval` in
 `Unlambda.idr`.
 
-This is important for two reasons: 1) We make sure we get the semantics right
-2) Because of the reasons described above, we need to be conservative in
+This step is important for two reasons: 1) We make sure we get the semantics
+right 2) Because of the reasons described above, we need to be conservative in
 specializers. When we stop specializing, we need to call interpreter to continue
 evaluation. This is implementing using interpreters, e.g. we fall back to
 interpretation.
@@ -159,11 +162,11 @@ TODO: Explain
 ---
 
 Now we can pass continuations from specializers to interpreters without any
-issues. They'll be interpreted differently by those functions. MetaOCaml
-implementation is in `UnlambdaCont.ml` and Idris implementation is `eval_cont`
-in `Unlambda.idr`.
+issues. The interpreter and specializer will interpret continuations
+differently. MetaOCaml implementation is in `UnlambdaCont.ml` and Idris
+implementation is `eval_cont` in `Unlambda.idr`.
 
-## Compilation with MetaOCaml (multi-stage programming)
+## Compilation with MetaOCaml (staging)
 
 Implementation of staged interpreter is given in `UnlambdaStaged.ml`. It's based
 on `UnlambdaCont.ml` interpreter. Only differences are:
@@ -213,7 +216,9 @@ Some example executions:
 * `Hello.unl` is a "hello world" program that prints "Hello world" a couple of
   times. If we run staged interpreter with `-staged -eval-S`, and print generated code, our MetaOCaml
   implementations generates this code:
+
   ```ocaml
+  .<
   let _ = Pervasives.print_char 'H' in
   let _ = Pervasives.print_char 'e' in
   let _ = Pervasives.print_char 'l' in
@@ -228,13 +233,16 @@ Some example executions:
   let _ = Pervasives.print_char '!' in
   let _ = Pervasives.print_char '\n' in
   ... repeats a couple of times ...
-  Syntax.I_S>.
+  Syntax.I_S
+  >.
   ```
+
   With this specialization parameters, what we had in effect is that we compiled
   the Unlambda program to OCaml, we eliminated all the interpretation costs
   without actually writing a compiler. Another interesting thing is that we
   unrolled the loop, which we do all the time with `-eval-S`. (this is why it
   leads to loops in most programs)
+
 * `Trivial.unl` is a program that prints "Unlambda, c'est trivial!" forever. If
   we run it using `-staged -eval-S`, it loops because the program is looping
   using `S` function. If we use `-staged -eval-cc`, it generates the code listed
@@ -243,12 +251,14 @@ Some example executions:
   interpreter without trying to specialize arguments of `S`. I think this
   improvement can be implemented without too much trouble, but current version
   doesn't do this.
+
 * `eof-test.unl` is a program that tries to read a character. It prints 'T' when
   it succeeds and 'F' otherwise(e.g. EOF happens). With `-staged -eval-S` it
   specializes the code a lot, but leaves the code with a conditional with
   non-specialized branches. We can use `-eval-eof` parameter to specialize one
   branch of the conditional with the assumption that condition is true. Here's
   the generated code without `-eval-eof`:
+
   ```ocaml
   UnlambdaCont.apply Syntax.I_S Syntax.V_S None
     [Syntax.ApplyTo
@@ -265,11 +275,14 @@ Some example executions:
     Syntax.DelayGuard Syntax.I_S;
     Syntax.ApplyTo (Syntax.Print_S '\n')]
   ```
+
   It falls back to the interpreter. Here's the code generated with `-eval-eof`:
-  ```
+
+  ```ocaml
   let _ = Pervasives.print_char 'F' in
   let _ = Pervasives.print_char '\n' in Syntax.I_S
   ```
+
   It evaluated the term in specialization time and generated OCaml code that
   prints 'F' and returns the value of the term.
 
@@ -281,8 +294,8 @@ done.
 ## Compilation with Idris (partial evaluation)
 
 Specializing Idris implementation of the interpreter is just a matter of adding
-some `[static]` annotations in interpreter functions. But it has the obvious
-problem: It loops in compile time for most programs.
+some `[static]` annotations in interpreter functions. But adding parameters for
+tuning specializations is a lot more tricky.
 
 One might think that implementing a simple compilation like MetaOCaml
 implementation's `-parse-only` is easily possible by just adding `[static]` to
@@ -294,12 +307,12 @@ calls by the partial evaluator, even though we don't have `[static]` in
 worked and it's a bug in Idris.
 
 Tuning the specializer is a lot tricky when compared with MetaOCaml
-implementation, in which case we just had to add a couple of conditionals and
-brackets. We need to add some optimization functions that does the optimizations
-we want. These functions should have type `Exp -> (Exp, [Continuation])` and
-they have to be terminating on all inputs. We then need to make sure those
-functions are applied completely in compile time by the partial evaluator. This
-is the approach used by Sperber and Thiemann in '96 paper(see [^3]).
+implementation: we just had to add a couple of conditionals and brackets. We
+need to add some optimization functions that does the optimizations we want.
+These functions should have type `Exp -> (Exp, [Continuation])` and they have to
+be terminating on all inputs. We then need to make sure those functions are
+applied completely in compile time by the partial evaluator. This is the
+approach used by Sperber and Thiemann in '96 paper(see [^3]).
 
 For this purpose we implement `eval_static`, which unlike the name doesn't
 actually evaluate, it's an optimizer. It does the transformations depending on
@@ -309,21 +322,40 @@ This approach of applying optimizers statically using partial evaluation may
 look OK at first sight, but it's actually a lot less flexible. As an example,
 see implementation of `-eval-eof` optimization in `apply_static` in
 `Unlambda.idr`. We can evaluate the branch statically, but incorporating the
-result with existing code is tricky. We need to generate a term of object
-language that reads a character, takes the optimized branch if it's failed, and
-takes the other branch otherwise. Thankfully, in this case this is possible,
-because we can generate an object language term that does exactly that. The
-problem is, evaluating that term takes more than 20 steps. If we didn't do a lot
-of optimizations in EOF branch, then we may end up de-optimizing the program by
-replacing a small term with a big one that takes a lot more to reduce. (see also
-comments in Idris file)
+result is tricky. We need to generate a term of object language that reads a
+character, takes the optimized branch if it's failed, and takes the other branch
+otherwise. Thankfully, in this case this is possible, because object language is
+expressive enough for this. The problem is, evaluating that term takes more than
+20 steps. If we didn't do a lot of optimizations in EOF branch, then we may end
+up de-optimizing the program by replacing a small term with a big one that takes
+a lot more to reduce. (see also comments in Idris file)
 
-What we did in MetaOCaml is that we generated OCaml code that does this. It was
-this code:
+What we did in MetaOCaml is that we generated OCaml code that does this, instead
+of generating object level terms. Here is the generated code:
 
 ```ocaml
-let _ = Pervasives.print_char 'F' in
-let _ = Pervasives.print_char '\n' in Syntax.I_S
+.<
+let c_1 = try Some (Pervasives.input_char Pervasives.stdin) with | _ -> None in
+match c_1 with
+| None  ->
+    let _ = Pervasives.print_char 'F' in
+    let _ = Pervasives.print_char '\n' in Syntax.I_S
+| Some _ ->
+    UnlambdaCont.apply Syntax.I_S Syntax.I_S c_1
+      [Syntax.ApplyTo
+         (Syntax.S2_S
+            ((Syntax.K1_S Syntax.C_S),
+              (Syntax.S2_S
+                 ((Syntax.K1_S
+                     (Syntax.S1_S (Syntax.K1_S (Syntax.K1_S Syntax.K_S)))),
+                   (Syntax.S2_S
+                      (Syntax.S_S,
+                        (Syntax.K1_S (Syntax.K1_S (Syntax.K1_S Syntax.I_S)))))))));
+      Syntax.DelayGuard (Syntax.Print_S 'F');
+      Syntax.DelayGuard (Syntax.Print_S 'T');
+      Syntax.DelayGuard Syntax.I_S;
+      Syntax.ApplyTo (Syntax.Print_S '\n')]
+>.
 ```
 
 But in partial evaluation our optimizers have to return object language terms.
@@ -344,7 +376,7 @@ of Idris AST instead of programs written in concrete Idris syntax.
 
 # Discussions and results
 
-MetaOCaml implementation was almost trivial. After initial interpreter I
+MetaOCaml implementation was almost trivial. After the initial interpreter I
 followed these steps:
 
 * I implemented a multi-stage version by only adding some bracket/escapes to
@@ -355,10 +387,10 @@ followed these steps:
 * This wasn't possible because two interpreters were using different
   representations of continuations. Defined an alternative representation of
   continuations to be able to evaluate them in both interpreters.
-* Added couple of conditions to tune optimizations.
+* Added a couple of conditionals to tune optimizations.
 
 Staging constructs leave no room for confusion -- it's trivial to see when we're
-falling back to interpreter, when we're specializing sub-terms and combining
+falling back to the interpreter, when we're specializing sub-terms and combining
 results etc.
 
 In the partial evaluation side, I had two major problems. First one is related
@@ -371,7 +403,8 @@ compilation time and doesn't do any further processing.
 To make sure partial evaluation is doing the work I'm expecting it to do, I need
 to print the code and make sure.
 
-It seems like partial evaluation is too complicated to completely automate.
+In the end, it seems to me like partial evaluation is too complicated to
+completely automate.
 
 Second problem is that even though staged interpreters(as described in [^3])
 help with getting optimizations done in partial evaluation, I think it's still
