@@ -61,15 +61,21 @@ Some example executions:
 
 ### Bonus content
 
-I didn't talk about this in the report, but `programs/` directory contains an Unlambda interpreter written in Unlambda. Using this, we can have a working second Futamura projection!
+`programs/Jerabek-unlambda1.unl` is an Unlambda interpreter written in
+Unlambda. It's not useful for anything(exercise: We can't generate a second
+Futamura projection using it, why?), but you can still have some `mind = blown`
+moments using MetaOCaml implementation with `-staged` argument.
+
+Example:
 
 ```
-$ cat programs/Hello.unl | ./unlambda_metaocaml programs/Jerabek-unlambda1.unl -staged -eval-S -eval-cc
+$ cat programs/Hello.unl | ./unlambda_metaocaml programs/Jerabek-unlambda1.unl -staged -eval-S -eval-cc -eval-eof
 ```
 
-mind = blown.
-
-TODO: Explain.
+Interestingly, this doesn't print same program that `./unlambda_metaocaml
+programs/Hello.unl -staged -eval-S -eval-cc -eval-eof` prints, but the
+specialization is correct, `-run` works correctly. Figuring out why generated
+code is different may be an interesting exercise.
 
 ---
 
