@@ -1,0 +1,79 @@
+--- UnlambdaCont.ml	2015-05-04 11:44:22.238494058 -0400
++++ UnlambdaStaged.ml	2015-05-06 17:00:58.676226400 -0400
+@@ -1,13 +1,28 @@
+
++open CmdArgs
++open Lift
+ open Syntax
+
+-  | [] -> e1
++  | [] -> .< .~ (lift_exp_s e1) >.
+   | DelayGuard e2 :: rest -> begin
+       match e1 with
+       | D_S -> apply_cont (D1_S e2) cc rest
+@@ -16,34 +31,52 @@
+   | ApplyTo f :: rest -> apply f e1 cc rest
+   | ApplyDelayed a :: rest -> apply e1 a cc rest
+
+-and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_s =
++and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_s code =
+   match e1 with
+   | K_S -> apply_cont (K1_S e2) cc cont
+   | K1_S x -> apply_cont x cc cont
+   | S_S -> apply_cont (S1_S e2) cc cont
+   | S1_S x -> apply_cont (S2_S (x, e2)) cc cont
+   | S2_S (x, y) ->
+-      eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
++      if opts.eval_S then
++        eval (Backtick_S (Backtick_S (x, e2), Backtick_S (y, e2))) cc cont
++      else
++        .< UnlambdaCont.eval (Backtick_S
++                               (Backtick_S ( .~ (lift_exp_s x), .~ (lift_exp_s e2)),
++                                Backtick_S ( .~ (lift_exp_s y), .~ (lift_exp_s e2))))
++                             .~ (lift_cc cc) .~ (lift_conts cont) >.
+   | I_S -> apply_cont e2 cc cont
+   | V_S -> apply_cont V_S cc cont
+   | C_S -> apply e2 (Cont_S cont) cc cont
+-  | Cont_S cont' -> apply_cont e2 cc cont'
++  | Cont_S cont' ->
++      if opts.eval_cc then
++        apply_cont e2 cc cont'
++      else
++        .< UnlambdaCont.apply_cont .~ (lift_exp_s e2) .~ (lift_cc cc) .~ (lift_conts cont') >.
+   | D_S -> apply_cont e2 cc cont
+   | D1_S f -> eval f cc (ApplyDelayed e2 :: cont)
+-  | Print_S c -> print_char c; flush stdout; apply_cont e2 cc cont
+-  | E_S x -> x
++  | Print_S c -> .< let _ = print_char c in .~ (apply_cont e2 cc cont) >.
++  | E_S x -> .< .~ (lift_exp_s x) >.
+   | Read_S ->
+-      let c = try Some (input_char stdin)
+-              with _ -> None in
+-      apply e2 (match c with None -> V_S | Some _ -> I_S) c cont
+-  | Cmp_S c ->
+-      apply e2 (if Some c = cc then I_S else V_S) cc cont
+-  | Repr_S ->
+-      apply e2 (match cc with None -> V_S | Some c -> Print_S c) cc cont
++      .< let c = try Some (input_char stdin)
++                 with _ -> None in
++         match c with
++         | None   ->
++            .~ (if opts.eval_eof then
++                  apply e2 V_S None cont
++                else
++                  .< UnlambdaCont.apply .~ (lift_exp_s e2) V_S None .~ (lift_conts cont) >.)
++         | Some _ ->
++             (* TODO: Briefly talk about why we can't use concrete character
++              * here in staged computation to specialize further *)
++             UnlambdaCont.apply .~ (lift_exp_s e2) I_S c .~ (lift_conts cont)
++       >.
++  | Cmp_S c -> apply e2 (if Some c = cc then I_S else V_S) cc cont
++  | Repr_S -> apply e2 (match cc with None -> V_S | Some c -> Print_S c) cc cont
+   | Backtick_S _ ->
+       raise (Failure "Can't apply to backtick.")
+
+-and eval (exp : exp_s) (cc : char option) (cont : cont list) : exp_s =
++and eval (exp : exp_s) (cc : char option) (cont : cont list) : exp_s code =
+   match exp with
+   | Backtick_S (arg1, arg2) -> eval arg1 cc (DelayGuard arg2 :: cont)
+   | _ -> apply_cont exp cc cont
