@@ -138,7 +138,7 @@ so we need to remove those.
 After that compile and run it like this:
 
 ```
-$ metaocamlc UnlambdaCont.cmo pe_hello.ml -o pe_hello
+$ ocamlc UnlambdaCont.cmo pe_hello.ml -o pe_hello
 $ cat hello2.unl | ./pe_hello
 Hello world!
 Hello world!
