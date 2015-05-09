@@ -72,10 +72,83 @@ Example:
 $ cat programs/Hello.unl | ./unlambda_metaocaml programs/Jerabek-unlambda1.unl -staged -eval-S -eval-cc -eval-eof
 ```
 
-Interestingly, this doesn't print same program that `./unlambda_metaocaml
+~~Interestingly, this doesn't print same program that `./unlambda_metaocaml
 programs/Hello.unl -staged -eval-S -eval-cc -eval-eof` prints, but the
 specialization is correct, `-run` works correctly. Figuring out why generated
-code is different may be an interesting exercise.
+code is different may be an interesting exercise.~~
+
+Apparently my sleep deprived brain has failed me. It's obvious that these two
+commands can't generate same programs:
+
+```
+$ cat programs/Hello.unl | ./unlambda_metaocaml programs/Jerabek-unlambda1.unl -staged -eval-S -eval-cc -eval-eof
+$ ./unlambda_metaocaml programs/Hello.unl -staged -eval-S -eval-cc -eval-eof
+```
+
+Because first command isn't expecting any inputs at all. It's just compiling
+the interpreter. We need a partial evaluator if we want that command to compile
+programs.
+
+I implemented `-partial-eval` argument, and now we can use the interpreter for
+compiling programs. These two commands generate same programs:
+
+```
+$ cat programs/Hello.unl | ./unlambda_metaocaml programs/Jerabek-unlambda1.unl -staged -eval-S -eval-cc -eval-eof -partial-eval
+$ ./unlambda_metaocaml programs/Hello.unl -staged -eval-S -eval-cc -eval-eof
+```
+
+For a truly `mind = blown` moment, here's a fun experiment. This program prints
+"Hello World!", 8 times:
+
+```
+`
+``si`k``s.H``s.e``s.l``s.l``s.o``s.
+``s.w``s.o``s.r``s.l``s.d``s.!``sri
+``si``si``si``si``si``si``si``si`ki
+```
+
+Let's split this file into two files, first one:
+
+```
+`
+``si`k``s.H``s.e``s.l``s.l``s.o``s.
+```
+
+Second one:
+
+```
+``s.w``s.o``s.r``s.l``s.d``s.!``sri
+``si``si``si``si``si``si``si``si`ki
+```
+
+(Note: Pushed these programs to the repo: `hello1.unl` and `hello2.unl`)
+
+Now partially evaluate Unlambda interpreter using first program:
+
+```
+$ cat hello1.unl | ./unlambda_metaocaml programs/Jerabek-unlambda1.unl -staged -eval-S -eval-cc -eval-eof -partial-eval > pe_hello.ml
+```
+
+What do you think generated program does?
+
+Before compiling generated file, just edit it and remove first two and last two
+characters. MetaOCaml is printing code wrapped with code brackets(`.<` and `>.`)
+so we need to remove those.
+
+After that compile and run it like this:
+
+```
+$ metaocamlc UnlambdaCont.cmo pe_hello.ml -o pe_hello
+$ cat hello2.unl | ./pe_hello
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+Hello world!
+```
 
 ---
 

@@ -58,19 +58,31 @@ and apply (e1 : exp_s) (e2 : exp_s) (cc : char option) (cont : cont list) : exp_
   | Print_S c -> .< let _ = print_char c in .~ (apply_cont e2 cc cont) >.
   | E_S x -> .< .~ (lift_exp_s x) >.
   | Read_S ->
-      .< let c = try Some (input_char stdin)
-                 with _ -> None in
-         match c with
-         | None   ->
-            .~ (if opts.eval_eof then
-                  apply e2 V_S None cont
-                else
-                  .< UnlambdaCont.apply .~ (lift_exp_s e2) V_S None .~ (lift_conts cont) >.)
-         | Some _ ->
-             (* TODO: Briefly talk about why we can't use concrete character
-              * here in staged computation to specialize further *)
-             UnlambdaCont.apply .~ (lift_exp_s e2) I_S c .~ (lift_conts cont)
-       >.
+      let gen_read () =
+        .< let c = try Some (input_char stdin)
+                   with _ -> None in
+           match c with
+           | None   ->
+               .~ (if opts.eval_eof then
+                     apply e2 V_S None cont
+                   else
+                     .< UnlambdaCont.apply .~ (lift_exp_s e2) V_S None .~ (lift_conts cont) >.)
+           | Some _ ->
+               UnlambdaCont.apply .~ (lift_exp_s e2) I_S c .~ (lift_conts cont)
+         >.
+      in
+      if opts.partial_eval then
+        let c = try Some (input_char stdin)
+                with _ -> None in
+        (* This part may look weird. The goal here is to specialize using
+         * partial input, for example we can provide first part of dynamic
+         * inputs and generate a program that reads the rest in runtime *)
+        match c with
+        | None -> gen_read ()
+        | Some _ ->
+            apply  e2 I_S c cont
+      else
+        gen_read ()
   | Cmp_S c -> apply e2 (if Some c = cc then I_S else V_S) cc cont
   | Repr_S -> apply e2 (match cc with None -> V_S | Some c -> Print_S c) cc cont
   | Backtick_S _ ->

@@ -87,6 +87,10 @@ let _ =
         Arg.Unit (function () -> opts.eval_cc <- true),
         "Specialize continuation calls. WARNING: May result in loops." );
 
+      ( "-partial-eval",
+        Arg.Unit (function () -> opts.partial_eval <- true),
+        "Partially evaluate programs that read input." );
+
     ] (fun annon_arg -> match !input_file with
                         | None -> input_file := Some annon_arg
                         | Some i -> raise (Failure ("Input file is already specified as " ^ i))) usage;

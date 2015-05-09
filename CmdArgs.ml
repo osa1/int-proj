@@ -10,6 +10,7 @@ type cmd_opts =
     mutable eval_S : bool;              (* evaluate S calls *)
     mutable eval_eof : bool;            (* specialize None branch of "read"('@') *)
     mutable eval_cc : bool;             (* specialize continuation calls *)
+    mutable partial_eval : bool;        (* partially evaluate programs that reads input *)
   }
 
 let init_opts input_file =
@@ -21,6 +22,7 @@ let init_opts input_file =
     eval_S = false;
     eval_eof = false;
     eval_cc = false;
+    partial_eval = false;
   }
 
 (* FIXME: Remove global state *)
