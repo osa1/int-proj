@@ -411,7 +411,13 @@ it was trivial.
 [^1]: Mentioned in [Intorduction to Supercompilation, Sørensen and
 Glück](http://link.springer.com/chapter/10.1007%2F3-540-47018-2_10), without
 referencing Turchin's papers. It's not clear when Turchin realized the idea and
-whether he published it or not.
+whether he published it or not. EDIT: According to [A Roadmap to
+Metacomputation by
+Supercompilation](http://repository.readscheme.org/ftp/papers/dagstuhl-pe96/02.pdf)
+by Robert Glück and Morten Heine Sørensen, this is described in Turchin's book
+"Basic Refal and its implementation on computer". The name is a translation;
+it's published in Russian. The book is published in 1977. (see the paper for
+original name of the book)
 
 [^2]: Partial evaluator of Idris is described
 [here](https://github.com/idris-lang/Idris-dev/wiki/Static-Arguments-and-Partial-Evaluation).
